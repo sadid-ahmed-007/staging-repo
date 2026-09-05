@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base:       #f8fafc;
+    --bg-surface:    #ffffff;
+    --bg-elevated:   #f1f5f9;
+    --border:        #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text-primary:  #0f172a;
+    --text-secondary:#475569;
+    --text-muted:    #94a3b8;
+    --text-inverse:  #ffffff;
+    --brand:         #6366f1;
+    --brand-hover:   #4f46e5;
+    --brand-light:   #e0e9ff;
+    --success:       #22c55e;
+    --success-hover: #16a34a;
+    --warning:       #f59e0b;
+    --danger:        #ef4444;
+    --info:          #0ea5e9;
+    --info-hover:    #0284c7;
+  }
+
+  .dark {
+    --bg-base:       #0f172a;
+    --bg-surface:    #1e293b;
+    --bg-elevated:   #172033;
+    --border:        #334155;
+    --border-strong: #475569;
+    --text-primary:  #f1f5f9;
+    --text-secondary:#94a3b8;
+    --text-muted:    #64748b;
+    --text-inverse:  #0f172a;
+    --brand:         #818cf8;
+    --brand-hover:   #a5b8fc;
+    --brand-light:   #1e1b4b;
+    --success:       #4ade80;
+    --success-hover: #22c55e;
+    --warning:       #fbbf24;
+    --danger:        #f87171;
+    --info:          #38bdf8;
+    --info-hover:    #0ea5e9;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * { box-sizing: border-box; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { 
+    background: transparent; 
+  }
+  ::-webkit-scrollbar-thumb { 
+    background: var(--border-strong);
+    border-radius: 3px;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full rounded-[8px] border border-[var(--border)] bg-[var(--bg-surface)] text-[14px] text-[var(--text-primary)] outline-none transition-all px-3 py-2 min-h-[40px] focus:border-[var(--brand)] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] disabled:opacity-50 disabled:bg-[var(--bg-elevated)];
+  }
+}
+

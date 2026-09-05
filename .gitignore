@@ -1,0 +1,11 @@
+target/
+*.class
+*.jar
+.idea/
+*.iml
+node_modules/
+dist/
+.env.local
+backend_log.txt
+maven.zip
+.env
