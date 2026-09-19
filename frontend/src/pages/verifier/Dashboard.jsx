@@ -56,46 +56,42 @@ export default function VerifierDashboard() {
             label="Accessible Students" 
             value={stats?.accessibleStudents ?? 0} 
             color="blue"
+            to="/verifier/accessible-certificates"
           />
           <StatCard 
             icon={<Clock className="h-5 w-5 text-yellow-500" />} 
             label="Pending Requests" 
             value={stats?.pendingRequests ?? 0} 
             color="yellow"
+            to="/verifier/access-requests?status=pending"
           />
-          <div 
-            onClick={() => navigate('/verifier/verification-history?filter=today')}
-            className="cursor-pointer transition-transform hover:scale-[1.02]"
-          >
-            <StatCard 
-              icon={<Calendar className="h-5 w-5 text-green-500" />} 
-              label="Verifications Today" 
-              value={stats?.verificationsToday ?? 0} 
-              color="green"
-            />
-          </div>
-          <div 
-            onClick={() => navigate('/verifier/verification-history')}
-            className="cursor-pointer transition-transform hover:scale-[1.02]"
-          >
-            <StatCard 
-              icon={<ShieldCheck className="h-5 w-5 text-blue-500" />} 
-              label="Total Verifications" 
-              value={stats?.totalVerifications ?? 0} 
-              color="blue"
-            />
-          </div>
+          <StatCard 
+            icon={<Calendar className="h-5 w-5 text-green-500" />} 
+            label="Verifications Today" 
+            value={stats?.verificationsToday ?? 0} 
+            color="green"
+            to="/verifier/verification-history?filter=today"
+          />
+          <StatCard 
+            icon={<ShieldCheck className="h-5 w-5 text-blue-500" />} 
+            label="Total Verifications" 
+            value={stats?.totalVerifications ?? 0} 
+            color="blue"
+            to="/verifier/verification-history"
+          />
           <StatCard 
             icon={<CheckCircle className="h-5 w-5 text-green-500" />} 
             label="Approved Requests" 
             value={stats?.approvedRequests ?? 0} 
             color="green"
+            to="/verifier/access-requests?status=approved"
           />
           <StatCard 
             icon={<XCircle className="h-5 w-5 text-red-500" />} 
             label="Rejected Requests" 
             value={stats?.rejectedRequests ?? 0} 
             color="red"
+            to="/verifier/access-requests?status=rejected"
           />
         </div>
       </div>

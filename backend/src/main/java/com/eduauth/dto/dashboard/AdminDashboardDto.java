@@ -10,4 +10,5 @@ public class AdminDashboardDto {
     private long totalUniversities;
     private long totalStudents;
     private long totalVerifiers;
+    private long totalEnrollments;
 }

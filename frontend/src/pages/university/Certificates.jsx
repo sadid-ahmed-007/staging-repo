@@ -34,13 +34,19 @@ export default function UniversityCertificates() {
   const filteredCertificates = certificates.filter((cert) => {
     // Level filter
     if (levelFilter !== 'all') {
-      const matchLevel = cert.certificateLevel?.toLowerCase() === levelFilter.toLowerCase();
+      const matchLevel = cert.certificateLevel?.toLowerCase().includes(levelFilter.toLowerCase());
       if (!matchLevel) return false;
     }
 
     // Month filter (issueDate)
     if (monthFilter && cert.issueDate) {
-      const certMonth = cert.issueDate.substring(0, 7); // yyyy-mm
+      let certMonth = '';
+      if (Array.isArray(cert.issueDate)) {
+        certMonth = `${cert.issueDate[0]}-${String(cert.issueDate[1]).padStart(2, '0')}`;
+      } else if (typeof cert.issueDate === 'string') {
+        certMonth = cert.issueDate.substring(0, 7); // yyyy-mm
+      }
+      
       if (certMonth !== monthFilter) return false;
     }
 
@@ -184,8 +190,7 @@ export default function UniversityCertificates() {
           <ErrorMessage message={error} retry={fetchCertificates} />
         ) : filteredCertificates.length === 0 ? (
           <EmptyState
-            title="No Certificates Found"
-            message={searchQuery || levelFilter !== 'all' || monthFilter ? `No certificates match your search filters.` : `You haven't issued any certificates yet.`}
+            title="No certificates issued yet"
             icon={Award}
           />
         ) : (

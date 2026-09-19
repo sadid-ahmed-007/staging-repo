@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, BarChart, Layers, ShieldCheck, History, Settings, Award, UserCheck, Building2, FilePlus, FileSearch, FileEdit, ScrollText, User, LogOut, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart, Layers, ShieldCheck, History, Settings, Award, UserCheck, Building2, FilePlus, FileSearch, FileEdit, ScrollText, User, LogOut, SlidersHorizontal, Loader2, Search, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { cn } from '../../utils/helpers';
 import api from '../../services/api';
 
@@ -20,6 +21,7 @@ const navGroups = {
       label: 'ACCOUNT',
       items: [
         { to: '/profile', label: 'Profile', icon: User },
+        { to: '/notifications', label: 'Notifications', icon: Bell },
         { to: '/settings', label: 'Settings', icon: Settings },
       ]
     }
@@ -30,14 +32,16 @@ const navGroups = {
       items: [
         { to: '/university/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/university/enrollments', label: 'Enrollments', icon: Users },
-        { to: '/university/issue-certificate', label: 'Issue Certificate', icon: FilePlus },
         { to: '/university/certificates', label: 'Certificates', icon: Award },
+        { to: '/university/issue-certificate', label: 'Issue Certificate', icon: FilePlus },
       ]
     },
     {
-      label: 'MANAGE',
+      label: 'ACCOUNT',
       items: [
-        { to: '/university/settings', label: 'Manage', icon: SlidersHorizontal },
+        { to: '/profile', label: 'Profile', icon: User },
+        { to: '/notifications', label: 'Notifications', icon: Bell },
+        { to: '/university/settings', label: 'Settings', icon: Settings },
       ]
     }
   ],
@@ -48,14 +52,21 @@ const navGroups = {
         { to: '/verifier/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/verifier/accessible-certificates', label: 'Accessible Certificates', icon: Award },
         { to: '/verifier/verify-certificate', label: 'Verify Certificate', icon: ShieldCheck },
-        { to: '/verifier/access-requests', label: 'Access Requests', icon: FileSearch },
         { to: '/verifier/verification-history', label: 'Verification History', icon: History },
+      ]
+    },
+    {
+      label: 'ACCESS',
+      items: [
+        { to: '/verifier/search', label: 'Search Students', icon: Search },
+        { to: '/verifier/access-requests', label: 'Access Requests', icon: FileSearch },
       ]
     },
     {
       label: 'ACCOUNT',
       items: [
         { to: '/profile', label: 'Profile', icon: User },
+        { to: '/notifications', label: 'Notifications', icon: Bell },
         { to: '/settings', label: 'Settings', icon: Settings },
       ]
     }
@@ -77,19 +88,50 @@ const navGroups = {
         { to: '/admin/profile-change-requests', label: 'Profile Requests', icon: FileEdit },
         { to: '/admin/activity-logs', label: 'Activity Logs', icon: ScrollText },
       ]
+    },
+    {
+      label: 'ACCOUNT',
+      items: [
+        { to: '/profile', label: 'Profile', icon: User },
+        { to: '/notifications', label: 'Notifications', icon: Bell },
+      ]
     }
   ],
 };
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const groups = navGroups[user?.role] || [];
   const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
   const [pendingProfileChanges, setPendingProfileChanges] = useState(0);
   const [pendingUsers, setPendingUsers] = useState(0);
+  const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
+    if (user?.role === 'student') {
+      const fetchAccessRequestsCount = async () => {
+        try {
+          const { data } = await api.get('/student/access-requests', {
+            params: { status: 'pending', page: 0, size: 1 },
+          });
+          setPendingAccessRequests(data.total || 0);
+        } catch (e) { }
+      };
+
+      fetchAccessRequestsCount();
+      const interval = setInterval(fetchAccessRequestsCount, 30000);
+
+      const handleUpdate = () => fetchAccessRequestsCount();
+      window.addEventListener('access_requests_updated', handleUpdate);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('access_requests_updated', handleUpdate);
+      };
+    }
+
     if (user?.role === 'university') {
       const fetchCount = async () => {
         try {
@@ -186,6 +228,11 @@ export default function Sidebar({ open, onClose }) {
                   >
                     <div className="relative flex items-center">
                       <Icon className="w-4 h-4" />
+                      {to === '/student/access-requests' && pendingAccessRequests > 0 && (
+                        <span className="absolute -top-1.5 -right-2 flex min-h-[14px] min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
+                          {pendingAccessRequests > 9 ? '9+' : pendingAccessRequests}
+                        </span>
+                      )}
                       {to === '/university/enrollments' && pendingWithdrawals > 0 && (
                         <span className="absolute -top-1.5 -right-2 flex min-h-[14px] min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
                           {pendingWithdrawals > 9 ? '9+' : pendingWithdrawals}
@@ -199,6 +246,11 @@ export default function Sidebar({ open, onClose }) {
                       {to === '/admin/user-approvals' && pendingUsers > 0 && (
                         <span className="absolute -top-1.5 -right-2 flex min-h-[14px] min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
                           {pendingUsers > 9 ? '9+' : pendingUsers}
+                        </span>
+                      )}
+                      {to === '/notifications' && unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-2 flex min-h-[14px] min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
+                          {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
                     </div>

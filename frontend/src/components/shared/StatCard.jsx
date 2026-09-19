@@ -15,44 +15,59 @@ export default function StatCard({
   color, // for backward compatibility
   loading = false,
   to = '#',
-  tooltip = ''
+  tooltip = '',
+  pulse = false
 }) {
   const actualTitle = title || label;
   const actualVariant = variant !== 'default' ? variant : (color || 'default');
 
   const iconColors = {
-    default: 'bg-[var(--brand-light)] text-[var(--brand)]',
-    primary: 'bg-[var(--brand-light)] text-[var(--brand)]',
-    success: 'bg-[var(--success)]/10 text-[var(--success)]',
-    green: 'bg-[var(--success)]/10 text-[var(--success)]',
-    warning: 'bg-[var(--warning)]/10 text-[var(--warning)]',
-    yellow: 'bg-[var(--warning)]/10 text-[var(--warning)]',
-    danger:  'bg-[var(--danger)]/10 text-[var(--danger)]',
-    red:  'bg-[var(--danger)]/10 text-[var(--danger)]',
+    default: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
+    primary: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400',
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
+    success: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+    green: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+    warning: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+    yellow: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+    orange: 'bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400',
+    danger:  'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400',
+    red:  'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400',
+    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400',
+    gray: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
   };
 
   if (loading) {
     return (
-      <Card>
-        <div className="flex items-start justify-between">
-          <div>
+      <Card className="h-full">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <div className="h-4 w-24 animate-pulse rounded bg-[var(--bg-elevated)]" />
-            <div className="mt-4 h-8 w-16 animate-pulse rounded bg-[var(--bg-elevated)]" />
+            <div className="mt-3 h-8 w-16 animate-pulse rounded bg-[var(--bg-elevated)]" />
             {trend && <div className="mt-2 h-3 w-12 animate-pulse rounded bg-[var(--bg-elevated)]" />}
           </div>
-          <div className="h-10 w-10 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
+          <div className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-[var(--bg-elevated)]" />
         </div>
       </Card>
     );
   }
 
   return (
-    <Link to={to} title={tooltip} className="block transition-transform hover:-translate-y-1 hover:scale-[1.02]">
-      <Card>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-medium text-[var(--text-secondary)]">{actualTitle}</p>
-            <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">{value}</p>
+    <Link to={to} title={tooltip} className="block h-full transition-transform hover:-translate-y-1 hover:scale-[1.01]">
+      <Card className="relative h-full flex flex-col justify-between overflow-hidden">
+        {pulse && (
+          <span className="absolute top-3 right-3 flex h-2.5 w-2.5" title="Requires attention">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+        )}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-[var(--text-secondary)] line-clamp-1" title={actualTitle}>
+              {actualTitle}
+            </p>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+              {value}
+            </p>
             {trend && trendValue && (
               <div className={cn(
                 "mt-2 flex items-center text-xs font-medium",
@@ -64,7 +79,7 @@ export default function StatCard({
             )}
           </div>
           {icon && (
-            <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", iconColors[actualVariant] || iconColors.default)}>
+            <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", iconColors[actualVariant] || iconColors.default)}>
               {icon}
             </div>
           )}

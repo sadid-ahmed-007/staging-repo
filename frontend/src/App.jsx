@@ -49,6 +49,7 @@ const UniversitySettings = React.lazy(() => import('./pages/university/Settings'
 
 // Verifier pages
 const VerifierDashboard = React.lazy(() => import('./pages/verifier/Dashboard'));
+const StudentSearch = React.lazy(() => import('./pages/verifier/StudentSearch'));
 const VerifierAccessRequests = React.lazy(() => import('./pages/verifier/AccessRequests'));
 const VerifierAccessibleCertificates = React.lazy(() => import('./pages/verifier/AccessibleCertificates'));
 const VerifierVerifyCertificate = React.lazy(() => import('./pages/verifier/VerifyCertificate'));
@@ -148,7 +149,9 @@ export default function App() {
                   {/* Verifier Routes */}
                   <Route element={<ProtectedRoute allowedRoles={['verifier']} />}>
                     <Route path="/verifier/dashboard" element={<VerifierDashboard />} />
+                    <Route path="/verifier/search" element={<StudentSearch />} />
                     <Route path="/verifier/accessible-certificates" element={<VerifierAccessibleCertificates />} />
+                    <Route path="/verifier/accessible-certificates/:studentId" element={<VerifierAccessibleCertificates />} />
                     <Route path="/verifier/access-requests" element={<VerifierAccessRequests />} />
                     <Route path="/verifier/verify-certificate" element={<VerifierVerifyCertificate />} />
                     <Route path="/verifier/verification-history" element={<VerificationHistory />} />

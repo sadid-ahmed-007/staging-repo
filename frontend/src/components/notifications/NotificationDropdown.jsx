@@ -7,23 +7,30 @@ import {
   UserPlus,
   UserX,
   CheckCircle,
-  Edit,
+  XCircle,
+  AlertCircle,
+  Calendar,
   Check,
   CheckCheck
 } from 'lucide-react';
 import api from '../../services/api';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
-import { cn } from '../../utils/helpers';
+import { cn, timeAgo } from '../../utils/helpers';
 import { useNotifications } from '../../contexts/NotificationContext';
 
 const TYPE_CONFIG = {
-  ENROLLMENT:        { icon: GraduationCap, color: 'text-blue-500',    bg: 'bg-blue-100 dark:bg-blue-900/30' },
-  CERTIFICATE_ISSUED:{ icon: Award,         color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
-  ACCESS_REQUEST:    { icon: UserPlus,      color: 'text-orange-500',  bg: 'bg-orange-100 dark:bg-orange-900/30' },
-  WITHDRAWAL:        { icon: UserX,         color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
-  APPROVAL:          { icon: CheckCircle,   color: 'text-emerald-500', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-  PROFILE_CHANGE:    { icon: Edit,          color: 'text-blue-500',    bg: 'bg-blue-100 dark:bg-blue-900/30' },
-  INFO:              { icon: Bell,          color: 'text-gray-500',    bg: 'bg-gray-100 dark:bg-gray-800' },
+  CERTIFICATE_ISSUED:   { icon: Award,         color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  ENROLLMENT_CONFIRMED: { icon: GraduationCap, color: 'text-blue-500',    bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  ACCESS_REQUEST:       { icon: UserPlus,      color: 'text-orange-500',  bg: 'bg-orange-100 dark:bg-orange-900/30' },
+  ACCESS_APPROVED:      { icon: CheckCircle,   color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  ACCESS_REJECTED:      { icon: XCircle,       color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
+  ACCESS_REVOKED:       { icon: UserX,         color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
+  WITHDRAWAL_REQUESTED: { icon: AlertCircle,   color: 'text-yellow-500',  bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  WITHDRAWAL_APPROVED:  { icon: CheckCircle,   color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  WITHDRAWAL_REJECTED:  { icon: XCircle,       color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
+  ACCOUNT_APPROVED:     { icon: CheckCircle,   color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  GRADUATION_EXTENDED:  { icon: Calendar,      color: 'text-blue-500',    bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  INFO:                 { icon: Bell,          color: 'text-gray-500',    bg: 'bg-gray-100 dark:bg-gray-800' },
 };
 
 export default function NotificationDropdown() {
@@ -39,7 +46,10 @@ export default function NotificationDropdown() {
   const fetchNotifications = async () => {
     try {
       const { data } = await api.get('/notifications');
-      setNotifications(data.notifications);
+      setNotifications(data.data || []);
+      if (data.unread_count !== undefined) {
+        setUnreadCount(data.unread_count);
+      }
     } catch (error) {
       console.error('Failed to fetch notifications', error);
     }
@@ -55,7 +65,7 @@ export default function NotificationDropdown() {
     e.stopPropagation();
     try {
       await api.post(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Failed to mark notification as read', error);
@@ -65,7 +75,7 @@ export default function NotificationDropdown() {
   const markAllAsRead = async () => {
     try {
       await api.post('/notifications/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all as read', error);
@@ -73,12 +83,12 @@ export default function NotificationDropdown() {
   };
 
   const handleNotificationClick = (notification) => {
-    if (!notification.is_read) {
+    if (!notification.read) {
       markAsRead(notification.id, { stopPropagation: () => { } });
     }
     setIsOpen(false);
-    if (notification.action_url) {
-      navigate(notification.action_url);
+    if (notification.actionUrl) {
+      navigate(notification.actionUrl);
     }
   };
 
@@ -90,28 +100,23 @@ export default function NotificationDropdown() {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 ring-2 ring-[var(--bg-surface)]">
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1 ring-2 ring-[var(--bg-surface)]">
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[360px] max-h-[400px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 flex flex-col overflow-hidden">
+        <div className="absolute right-0 mt-2 w-[380px] max-h-[480px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">Notifications</h3>
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                disabled={unreadCount === 0}
-                className={cn(
-                  "px-2 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1",
-                  unreadCount > 0
-                    ? "text-[var(--brand)] hover:bg-[var(--brand-light)] cursor-pointer"
-                    : "text-[var(--text-muted)] cursor-not-allowed"
-                )}
+                className="px-2 py-1 rounded text-xs font-medium text-[var(--brand)] hover:bg-[var(--brand-light)] transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <CheckCheck className="w-4 h-4" />
-                <span>Mark all read</span>
+                <span>Mark all as read</span>
               </button>
             )}
           </div>
@@ -119,7 +124,7 @@ export default function NotificationDropdown() {
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-sm text-[var(--text-muted)]">
-                You have no notifications.
+                No notifications
               </div>
             ) : (
               <div className="divide-y divide-[var(--border)]">
@@ -133,7 +138,7 @@ export default function NotificationDropdown() {
                       onClick={() => handleNotificationClick(notification)}
                       className={cn(
                         "p-[12px_16px] min-h-[64px] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer group flex gap-3",
-                        !notification.is_read ? "border-l-[3px] border-l-[var(--brand)] bg-[rgba(var(--brand-rgb),0.3)]" : "border-l-[3px] border-l-transparent"
+                        !notification.read ? "bg-blue-50 dark:bg-blue-900/10" : "bg-white dark:bg-[var(--bg-surface)]"
                       )}
                     >
                       <div className={cn("flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center", config.bg, config.color)}>
@@ -141,17 +146,29 @@ export default function NotificationDropdown() {
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-[var(--text-primary)] leading-tight">
+                          <p className={cn("text-sm text-[var(--text-primary)] leading-tight", !notification.read ? "font-bold" : "font-medium")}>
                             {notification.title}
                           </p>
                           <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
-                            {notification.created_at_human}
+                            {timeAgo(notification.createdAt)}
                           </span>
                         </div>
-                        <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+                        <p className="text-xs text-[var(--text-secondary)] mt-1 truncate max-w-[240px]">
                           {notification.message}
                         </p>
                       </div>
+                      
+                      {!notification.read && (
+                        <div className="flex-shrink-0 flex items-center justify-center">
+                          <button
+                            onClick={(e) => markAsRead(notification.id, e)}
+                            className="p-1 rounded-full text-blue-500 hover:bg-blue-100 transition-colors"
+                            title="Mark as read"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -162,9 +179,9 @@ export default function NotificationDropdown() {
           <div className="p-2 border-t border-[var(--border)]">
             <button
               onClick={() => { setIsOpen(false); navigate('/notifications'); }}
-              className="w-full py-2 text-sm text-center font-medium text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-md transition-colors"
+              className="w-full py-2 text-sm text-center font-medium text-[var(--brand)] hover:bg-[var(--brand-light)] rounded-md transition-colors"
             >
-              View all notifications
+              See all notifications &rarr;
             </button>
           </div>
         </div>

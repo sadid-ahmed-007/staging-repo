@@ -30,16 +30,36 @@ public class Enrollment {
     @JoinColumn(name = "institution_id", insertable = false, updatable = false)
     private Institution institution;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", insertable = false, updatable = false)
+    private Student student;
+
     /** Roll number / Student ID assigned by the university */
     @Column(name = "roll_number")
     private String rollNumber;
 
+    @Column(name = "department_id")
+    private Long departmentId;
+
+    @Column(name = "major_id")
+    private Long majorId;
+
+    @Column(name = "certificate_level_id")
+    private Long certificateLevelId;
+
     private String program;
     private String batch;
 
+    /**
+     * DB ENUM: 'active','graduated','suspended','withdrawn'
+     * Withdrawal requests are tracked in the withdrawal_requests table separately.
+     */
     @Column(name = "status",
             columnDefinition = "ENUM('active','graduated','suspended','withdrawn')")
     private String status;
+
+    @Column(name = "suspension_reason", columnDefinition = "TEXT")
+    private String suspensionReason;
 
     @Column(name = "enrollment_date")
     private LocalDate enrollmentDate;
@@ -50,6 +70,9 @@ public class Enrollment {
     @Column(name = "actual_graduation_date")
     private LocalDate actualGraduationDate;
 
+    @Column(name = "enrolled_by")
+    private Long enrolledBy;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -57,4 +80,7 @@ public class Enrollment {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

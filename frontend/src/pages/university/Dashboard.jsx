@@ -48,36 +48,42 @@ export default function UniversityDashboard() {
           </p>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard 
-            icon={<Users className="h-5 w-5 text-blue-500" />} 
+            icon={<Users className="h-5 w-5" />} 
             label="Total Enrolled" 
             value={stats?.totalEnrolled ?? 0} 
             color="blue"
+            to="/university/enrollments?status=active"
           />
           <StatCard 
-            icon={<GraduationCap className="h-5 w-5 text-green-500" />} 
+            icon={<GraduationCap className="h-5 w-5" />} 
             label="Graduated Students" 
             value={stats?.graduatedStudents ?? 0} 
             color="green"
+            to="/university/enrollments?status=graduated"
           />
           <StatCard 
-            icon={<Award className="h-5 w-5 text-blue-500" />} 
+            icon={<Award className="h-5 w-5" />} 
             label="Certificates Issued" 
             value={stats?.certificatesIssued ?? 0} 
-            color="blue"
+            color="purple"
+            to="/university/certificates"
           />
           <StatCard 
-            icon={<AlertTriangle className="h-5 w-5 text-yellow-500" />} 
+            icon={<AlertTriangle className="h-5 w-5" />} 
             label="Pending Withdrawals" 
             value={stats?.pendingWithdrawals ?? 0} 
-            color="yellow"
+            color="orange"
+            pulse={(stats?.pendingWithdrawals ?? 0) > 0}
+            to="/university/enrollments?status=withdrawal_requested"
           />
           <StatCard 
-            icon={<Calendar className="h-5 w-5 text-green-500" />} 
+            icon={<Calendar className="h-5 w-5" />} 
             label="This Month's Certificates" 
             value={stats?.thisMonthCertificates ?? 0} 
-            color="green"
+            color="blue"
+            to="/university/certificates"
           />
         </div>
       </div>

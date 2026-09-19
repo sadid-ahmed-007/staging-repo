@@ -11,21 +11,28 @@ import {
   UserPlus, 
   UserX, 
   CheckCircle, 
-  Edit
+  XCircle,
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import api from '../../services/api';
-import { cn, formatDateTime } from '../../utils/helpers';
+import { cn, timeAgo } from '../../utils/helpers';
 import { useNotifications } from '../../contexts/NotificationContext';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 
 const TYPE_CONFIG = {
-  ENROLLMENT: { icon: GraduationCap, color: 'text-[var(--brand)]', bg: 'bg-[var(--brand-light)] ' },
-  CERTIFICATE_ISSUED: { icon: Award, color: 'text-[var(--success)]', bg: 'bg-[var(--success)]/10 ' },
-  ACCESS_REQUEST: { icon: UserPlus, color: 'text-[var(--warning)]', bg: 'bg-[var(--warning)]/10 ' },
-  WITHDRAWAL: { icon: UserX, color: 'text-[var(--danger)]', bg: 'bg-[var(--danger)]/10 ' },
-  APPROVAL: { icon: CheckCircle, color: 'text-[var(--success)]', bg: 'bg-[var(--success)]/10 ' },
-  PROFILE_CHANGE: { icon: Edit, color: 'text-[var(--brand)]', bg: 'bg-[var(--brand-light)] ' },
-  INFO: { icon: Bell, color: 'text-[var(--text-secondary)]', bg: 'bg-[var(--bg-elevated)] ' }
+  CERTIFICATE_ISSUED:   { icon: Award,         color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  ENROLLMENT_CONFIRMED: { icon: GraduationCap, color: 'text-blue-500',    bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  ACCESS_REQUEST:       { icon: UserPlus,      color: 'text-orange-500',  bg: 'bg-orange-100 dark:bg-orange-900/30' },
+  ACCESS_APPROVED:      { icon: CheckCircle,   color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  ACCESS_REJECTED:      { icon: XCircle,       color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
+  ACCESS_REVOKED:       { icon: UserX,         color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
+  WITHDRAWAL_REQUESTED: { icon: AlertCircle,   color: 'text-yellow-500',  bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  WITHDRAWAL_APPROVED:  { icon: CheckCircle,   color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  WITHDRAWAL_REJECTED:  { icon: XCircle,       color: 'text-red-500',     bg: 'bg-red-100 dark:bg-red-900/30' },
+  ACCOUNT_APPROVED:     { icon: CheckCircle,   color: 'text-green-500',   bg: 'bg-green-100 dark:bg-green-900/30' },
+  GRADUATION_EXTENDED:  { icon: Calendar,      color: 'text-blue-500',    bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  INFO:                 { icon: Bell,          color: 'text-gray-500',    bg: 'bg-gray-100 dark:bg-gray-800' },
 };
 
 export default function Notifications() {
@@ -33,24 +40,28 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
   const [pagination, setPagination] = useState({
-    current_page: 1,
-    last_page: 1,
-    total: 0
+    currentPage: 0,
+    totalPages: 1,
+    totalItems: 0,
+    perPage: 20
   });
   
   const navigate = useNavigate();
   const { setUnreadCount } = useNotifications();
 
-  const fetchNotifications = async (page = 1, currentFilter = filter) => {
+  const fetchNotifications = async (page = 0, currentFilter = filter) => {
     setLoading(true);
     try {
-      const params = { page };
+      const params = { page }; // 0-indexed for Spring Data JPA
       if (currentFilter !== 'all') {
         params.filter = currentFilter;
       }
       const { data } = await api.get('/notifications/all', { params });
-      setNotifications(data.notifications);
+      setNotifications(data.data || []);
       setPagination(data.pagination);
+      if (data.unread_count !== undefined) {
+        setUnreadCount(data.unread_count);
+      }
     } catch (error) {
       console.error('Failed to fetch notifications', error);
     } finally {
@@ -59,17 +70,17 @@ export default function Notifications() {
   };
 
   useEffect(() => {
-    fetchNotifications(1, filter);
+    fetchNotifications(0, filter);
   }, [filter]);
 
   const markAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
       await api.post(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n));
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
       if (filter === 'unread') {
-        fetchNotifications(pagination.current_page, filter);
+        fetchNotifications(pagination.currentPage, filter);
       }
     } catch (error) {
       console.error('Failed to mark notification as read', error);
@@ -79,10 +90,10 @@ export default function Notifications() {
   const markAllAsRead = async () => {
     try {
       await api.post('/notifications/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })));
+      setNotifications(prev => prev.map(n => ({ ...n, read: true, readAt: new Date().toISOString() })));
       setUnreadCount(0);
       if (filter === 'unread') {
-        fetchNotifications(1, filter);
+        fetchNotifications(0, filter);
       }
     } catch (error) {
       console.error('Failed to mark all as read', error);
@@ -90,16 +101,16 @@ export default function Notifications() {
   };
 
   const handleNotificationClick = (notification) => {
-    if (!notification.is_read) {
+    if (!notification.read) {
       markAsRead(notification.id);
     }
-    if (notification.action_url) {
-      navigate(notification.action_url);
+    if (notification.actionUrl) {
+      navigate(notification.actionUrl);
     }
   };
 
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.last_page) {
+    if (newPage >= 0 && newPage < pagination.totalPages) {
       fetchNotifications(newPage);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -158,7 +169,7 @@ export default function Notifications() {
               <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">No notifications</h3>
               <p className="mt-1 text-[var(--text-secondary)]">
                 {filter === 'all' 
-                  ? "You're all caught up! There are no notifications to show."
+                  ? "You are all caught up"
                   : `You have no ${filter} notifications.`}
               </p>
             </div>
@@ -174,11 +185,14 @@ export default function Notifications() {
                     onClick={() => handleNotificationClick(notification)}
                     className={cn(
                       "group relative flex gap-4 p-5 transition-colors cursor-pointer hover:bg-[var(--bg-elevated)]",
-                      !notification.is_read ? "bg-[var(--brand)]/[0.05]" : ""
+                      !notification.read ? "bg-blue-50 dark:bg-blue-900/10" : ""
                     )}
                   >
+                    {!notification.read && (
+                       <div className="absolute left-0 top-1/2 -mt-1 h-2 w-2 rounded-full bg-[var(--brand)] ml-2"></div>
+                    )}
                     <div className={cn(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-full ml-2",
                       config.bg, config.color
                     )}>
                       <Icon className="h-6 w-6" />
@@ -188,23 +202,23 @@ export default function Notifications() {
                       <div className="flex items-center justify-between gap-2">
                         <p className={cn(
                           "text-sm font-semibold",
-                          !notification.is_read ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
+                          !notification.read ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
                         )}>
                           {notification.title}
                         </p>
                         <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
-                          {formatDateTime(notification.created_at)}
+                          {timeAgo(notification.createdAt)}
                         </span>
                       </div>
                       <p className={cn(
                         "mt-1 text-sm",
-                        !notification.is_read ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
+                        !notification.read ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
                       )}>
                         {notification.message}
                       </p>
                     </div>
 
-                    {!notification.is_read && (
+                    {!notification.read && (
                       <div className="flex shrink-0 items-center justify-center">
                         <button
                           onClick={(e) => markAsRead(notification.id, e)}
@@ -223,31 +237,31 @@ export default function Notifications() {
         </div>
 
         {/* Pagination */}
-        {pagination.last_page > 1 && (
-          <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 sm:px-6">
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 sm:px-6 mt-4">
             <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Showing <span className="font-medium text-[var(--text-primary)]">{((pagination.current_page - 1) * 20) + 1}</span> to{' '}
+                  Showing <span className="font-medium text-[var(--text-primary)]">{(pagination.currentPage * pagination.perPage) + 1}</span> to{' '}
                   <span className="font-medium text-[var(--text-primary)]">
-                    {Math.min(pagination.current_page * 20, pagination.total)}
+                    {Math.min((pagination.currentPage + 1) * pagination.perPage, pagination.totalItems)}
                   </span>{' '}
-                  of <span className="font-medium text-[var(--text-primary)]">{pagination.total}</span> results
+                  of <span className="font-medium text-[var(--text-primary)]">{pagination.totalItems}</span> results
                 </p>
               </div>
               <div>
                 <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                   <button
-                    onClick={() => handlePageChange(pagination.current_page - 1)}
-                    disabled={pagination.current_page === 1}
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 0}
                     className="relative inline-flex items-center rounded-l-md px-2 py-2 text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)] hover:bg-[var(--bg-elevated)] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                   >
                     <span className="sr-only">Previous</span>
                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                   </button>
                   <button
-                    onClick={() => handlePageChange(pagination.current_page + 1)}
-                    disabled={pagination.current_page === pagination.last_page}
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages - 1}
                     className="relative inline-flex items-center rounded-r-md px-2 py-2 text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)] hover:bg-[var(--bg-elevated)] focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                   >
                     <span className="sr-only">Next</span>

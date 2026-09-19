@@ -13,7 +13,7 @@ export default function GrantedAccessCard({ access, onRevoke, loading }) {
   const expiresAt = new Date(access.expires_at);
   const now = new Date();
 
-  const isExpired = !access.is_active && !access.revoked_at && expiresAt <= now;
+  const isExpired = !access.isActive && !access.revoked_at && expiresAt <= now;
   const isRevoked = !!access.revoked_at;
   const isActive = !isExpired && !isRevoked;
 

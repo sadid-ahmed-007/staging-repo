@@ -202,7 +202,7 @@ CREATE TABLE enrollments (
   INDEX idx_fk_enrollments_cert_level (certificate_level_id),
   INDEX idx_fk_enrollments_department (department_id),
   INDEX idx_fk_enrollments_major (major_id),
-  UNIQUE KEY uq_enrollment_active (student_id, institution_id, status),
+  -- Note: single active enrollment is enforced at application level; composite unique on (student_id, institution_id, status) incorrectly blocks multiple historical withdrawn/graduated records
   CONSTRAINT fk_enrollments_student_id FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
   CONSTRAINT fk_enrollments_institution FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE,
   CONSTRAINT fk_enrollments_enrolled_by FOREIGN KEY (enrolled_by) REFERENCES users(id) ON DELETE CASCADE,
@@ -281,6 +281,7 @@ CREATE TABLE certificate_access_requests (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   verifier_id BIGINT UNSIGNED NOT NULL,
   student_id BIGINT UNSIGNED NOT NULL,
+  certificate_id BIGINT UNSIGNED NULL,
   purpose TEXT NOT NULL,
   status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   responded_at TIMESTAMP NULL,
@@ -291,7 +292,8 @@ CREATE TABLE certificate_access_requests (
   deleted_at TIMESTAMP NULL,
   INDEX idx_access_requests_verifier_student_status (verifier_id, student_id, status),
   CONSTRAINT fk_access_requests_verifier FOREIGN KEY (verifier_id) REFERENCES verifiers(id),
-  CONSTRAINT fk_access_requests_student FOREIGN KEY (student_id) REFERENCES students(id)
+  CONSTRAINT fk_access_requests_student FOREIGN KEY (student_id) REFERENCES students(id),
+  CONSTRAINT fk_access_requests_certificate FOREIGN KEY (certificate_id) REFERENCES certificates(id) ON DELETE SET NULL
 );
 
 -- Table: verifier_access - Active, expired, or revoked verifier access grants
@@ -299,6 +301,7 @@ CREATE TABLE verifier_access (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   verifier_id BIGINT UNSIGNED NOT NULL,
   student_id BIGINT UNSIGNED NOT NULL,
+  certificate_id BIGINT UNSIGNED NULL,
   request_id BIGINT UNSIGNED NULL,
   granted_at TIMESTAMP NULL DEFAULT NULL,
   expires_at TIMESTAMP NULL DEFAULT NULL,
@@ -310,6 +313,7 @@ CREATE TABLE verifier_access (
   INDEX idx_verifier_access_verifier_student_expires (verifier_id, student_id, expires_at),
   CONSTRAINT fk_verifier_access_verifier FOREIGN KEY (verifier_id) REFERENCES verifiers(id),
   CONSTRAINT fk_verifier_access_student FOREIGN KEY (student_id) REFERENCES students(id),
+  CONSTRAINT fk_verifier_access_certificate FOREIGN KEY (certificate_id) REFERENCES certificates(id) ON DELETE SET NULL,
   CONSTRAINT fk_verifier_access_request FOREIGN KEY (request_id) REFERENCES certificate_access_requests(id),
   CONSTRAINT fk_verifier_access_revoked_by FOREIGN KEY (revoked_by) REFERENCES users(id)
 );

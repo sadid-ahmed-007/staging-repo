@@ -1,492 +1,471 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { GraduationCap, AlertCircle, LogOut, Clock, Building2, CalendarPlus, X, Upload, Check, XCircle, ArrowRightLeft, Send, FileText, Info } from 'lucide-react';
-import Modal from '../../components/shared/Modal';
+import {
+  GraduationCap,
+  AlertCircle,
+  Clock,
+  Building2,
+  CheckCircle2,
+  XCircle,
+  BookOpen,
+  FileText,
+  Calendar,
+  AlertTriangle,
+  School,
+  Send
+} from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Card from '../../components/shared/Card';
 import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
-import EmptyState from '../../components/shared/EmptyState';
+import ConfirmModal from '../../components/shared/ConfirmModal';
 import api from '../../services/api';
-import { formatDate } from '../../utils/helpers';
+import { formatDate, cn } from '../../utils/helpers';
 
 export default function MyUniversity() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState(null);
-  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
-  const [showExtensionModal, setShowExtensionModal] = useState(false);
-  const [showProgramChangeModal, setShowProgramChangeModal] = useState(false);
-  
-  // States that were requested to be preserved
-  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
-  const [extensionRequests, setExtensionRequests] = useState([]);
-  const [enrollmentApplications, setEnrollmentApplications] = useState([]);
-  const [programChangeRequests, setProgramChangeRequests] = useState([]);
+  const [enrollment, setEnrollment] = useState(null);
+  const [withdrawalStatus, setWithdrawalStatus] = useState(null);
+
+  // Form & Confirm Modal state
+  const [withdrawalReason, setWithdrawalReason] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancellingWithdrawal, setIsCancellingWithdrawal] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: profileData } = await api.get('/profile');
-      setProfile(profileData.profile);
+      const [enrollmentRes, statusRes] = await Promise.all([
+        api.get('/student/enrollment').catch(() => ({ data: { data: null } })),
+        api.get('/student/enrollment/withdrawal-status').catch(() => ({ data: { data: null } })),
+      ]);
 
-      try {
-        const { data: wData } = await api.get('/student/withdrawal/requests');
-        setWithdrawalRequests(wData.requests || []);
-      } catch (_err) { /* ignore */ }
+      if (enrollmentRes.data?.success && enrollmentRes.data?.data) {
+        setEnrollment(enrollmentRes.data.data);
+      } else {
+        setEnrollment(null);
+      }
 
-      try {
-        const { data: eData } = await api.get('/student/extension-requests');
-        setExtensionRequests(eData.requests || []);
-      } catch (_err) { /* ignore */ }
-
-      try {
-        const { data: appData } = await api.get('/student/enrollment-applications');
-        setEnrollmentApplications(appData.applications || []);
-      } catch (_err) { /* ignore */ }
-
-      try {
-        const { data: pcData } = await api.get('/student/program-change-requests');
-        setProgramChangeRequests(pcData.requests || []);
-      } catch (_err) { /* ignore */ }
-    } catch (_error) {
+      if (statusRes.data?.success && statusRes.data?.data?.hasRequest) {
+        setWithdrawalStatus(statusRes.data.data);
+      } else {
+        setWithdrawalStatus(null);
+      }
+    } catch (err) {
+      console.error('Failed to load university information:', err);
       toast.error('Failed to load university information.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleConfirmWithdrawal = async () => {
+    if (!enrollment || withdrawalReason.trim().length < 20) {
+      toast.error('Withdrawal reason must be at least 20 characters');
+      return;
+    }
+
+    setIsSubmittingWithdrawal(true);
+    try {
+      const response = await api.post(
+        `/student/enrollment/${enrollment.id}/request-withdrawal`,
+        { reason: withdrawalReason.trim() }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message || 'Withdrawal request submitted successfully');
+        setShowConfirmModal(false);
+        setWithdrawalReason('');
+        await loadData();
+      }
+    } catch (err) {
+      console.error('Failed to request withdrawal:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit withdrawal request');
+    } finally {
+      setIsSubmittingWithdrawal(false);
+    }
+  };
+
+  const handleCancelWithdrawal = async () => {
+    setIsCancellingWithdrawal(true);
+    try {
+      const response = await api.delete('/student/enrollment/withdrawal-request');
+      if (response.data.success) {
+        toast.success(response.data.message || 'Withdrawal request cancelled successfully');
+        setShowCancelModal(false);
+        await loadData();
+      }
+    } catch (err) {
+      console.error('Failed to cancel withdrawal request:', err);
+      toast.error(err.response?.data?.message || 'Failed to cancel withdrawal request');
+    } finally {
+      setIsCancellingWithdrawal(false);
+    }
+  };
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex min-h-[50vh] items-center justify-center"><LoadingSpinner /></div>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <LoadingSpinner />
+        </div>
       </DashboardLayout>
     );
   }
 
-  const enrollmentHistory = profile?.enrollment_history || [];
+  // Not currently enrolled: center empty state on the page
+  if (!enrollment) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">My University</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              View your academic enrollment status and university details.
+            </p>
+          </div>
+
+          <div className="flex min-h-[55vh] items-center justify-center">
+            <div className="max-w-md w-full rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg-surface)] p-10 text-center shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">
+                <GraduationCap className="h-8 w-8" />
+              </div>
+              <h2 className="mt-4 text-lg font-bold text-[var(--text-primary)]">
+                You are not currently enrolled
+              </h2>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                You do not have an active enrollment at any university. Once an institution enrolls you, your full academic record, progress, and status will appear here.
+              </p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const isWithdrawalPending =
+    enrollment.status === 'withdrawal_requested' || withdrawalStatus?.status === 'pending';
+  const isApproved =
+    enrollment.status === 'withdrawn' || withdrawalStatus?.status === 'approved';
+  const isRejected =
+    withdrawalStatus?.status === 'rejected' && enrollment.status === 'active';
 
   return (
     <DashboardLayout>
-      <div className="space-y-[24px]">
+      <div className="space-y-6 pb-12">
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-[var(--text-primary)]">My University</h1>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">Manage your academic enrollment and view history.</p>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">My University</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              Manage your academic enrollment, view status, and request withdrawal.
+            </p>
           </div>
         </div>
 
-        {/* Section 1: Current Enrollment */}
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-[24px]">Current Enrollment</h2>
-          {profile?.current_enrollment ? (
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                  {profile.current_enrollment.institution_name}
+        {/* ================================================================= */}
+        {/* SECTION 1: CURRENT ENROLLMENT CARD                                */}
+        {/* ================================================================= */}
+        <Card className="shadow-sm border-[var(--border)]">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6 border-b border-[var(--border)]">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
+                  {enrollment.institutionName}
+                </h2>
+                {enrollment.enrollmentNumber && (
+                  <span className="rounded-md border border-[var(--brand)]/20 bg-[var(--brand-light)]/40 px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--brand)] dark:bg-[var(--brand-light)]/10">
+                    {enrollment.enrollmentNumber}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-medium text-[var(--text-secondary)]">
+                {enrollment.program}
+              </p>
+            </div>
+
+            {/* Status Badge */}
+            <div>
+              {enrollment.status === 'active' ? (
+                <Badge variant="success" dot size="lg">
+                  Active
+                </Badge>
+              ) : isWithdrawalPending ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-800/40 dark:bg-amber-950/40 dark:text-amber-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
+                  </span>
+                  Withdrawal Pending
+                </span>
+              ) : enrollment.status === 'withdrawn' ? (
+                <Badge variant="danger" dot size="lg">
+                  Withdrawn
+                </Badge>
+              ) : enrollment.status === 'graduated' ? (
+                <Badge variant="primary" dot size="lg">
+                  Graduated
+                </Badge>
+              ) : (
+                <Badge variant="default" dot size="lg">
+                  {enrollment.status?.toUpperCase()}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 text-sm">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Department
+              </p>
+              <p className="mt-1 font-medium text-[var(--text-primary)]">
+                {enrollment.department || '—'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Major
+              </p>
+              <p className="mt-1 font-medium text-[var(--text-primary)]">
+                {enrollment.major || 'None'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Batch
+              </p>
+              <p className="mt-1 font-medium text-[var(--text-primary)]">
+                {enrollment.batch || '—'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Assigned Student ID
+              </p>
+              <p className="mt-1 font-medium text-[var(--text-primary)]">
+                {enrollment.studentIdInUniversity || (
+                  <span className="text-[var(--text-muted)] italic">Not assigned yet</span>
+                )}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Enrollment Date
+              </p>
+              <p className="mt-1 font-medium text-[var(--text-primary)]">
+                {formatDate(enrollment.enrollmentDate)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Expected Graduation
+              </p>
+              <p className="mt-1 font-medium text-[var(--text-primary)]">
+                {formatDate(enrollment.expectedGraduationDate)}
+              </p>
+            </div>
+
+            {enrollment.actualGraduationDate && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  {enrollment.status === 'withdrawn' ? 'Withdrawn On' : 'Graduated On'}
+                </p>
+                <p className="mt-1 font-medium text-[var(--text-primary)]">
+                  {formatDate(enrollment.actualGraduationDate)}
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* ================================================================= */}
+        {/* SECTION 3: WITHDRAWAL STATUS                                      */}
+        {/* ================================================================= */}
+        {/* Pending Card */}
+        {isWithdrawalPending && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-5 dark:border-amber-800/40 dark:bg-amber-950/20 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2.5 text-amber-800 dark:text-amber-300">
+                <Clock className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <h3 className="text-base font-bold">
+                  Your withdrawal request is pending university review
                 </h3>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCancelModal(true)}
+                className="border-amber-400 bg-white/80 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/60 shadow-xs shrink-0 self-start sm:self-auto"
+              >
+                Cancel Request
+              </Button>
+            </div>
+            <div className="mt-3 rounded-lg border border-amber-200/80 bg-white/70 p-3.5 dark:border-amber-900/40 dark:bg-amber-900/10">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-300">
+                Reason submitted:
+              </p>
+              <p className="mt-1 text-xs italic text-[var(--text-secondary)]">
+                "{withdrawalStatus?.reason || enrollment.withdrawalReason || 'No details provided.'}"
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                Submitted on: {formatDate(withdrawalStatus?.createdAt || enrollment.withdrawalRequestedAt)}
+              </p>
+              <span className="text-xs text-amber-700/80 dark:text-amber-400/80">
+                You can cancel this request at any time before the university reviews it.
+              </span>
+            </div>
+          </div>
+        )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-[24px] gap-x-[48px] mb-[24px]">
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Student ID</p>
-                  <p className="text-sm text-[var(--text-primary)]">
-                    {profile.current_enrollment.roll_number || <span className="text-[var(--text-muted)] italic">Not assigned yet</span>}
-                  </p>
+        {/* Approved Card */}
+        {isApproved && (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50/70 p-5 dark:border-emerald-800/40 dark:bg-emerald-950/20 shadow-sm">
+            <div className="flex items-center gap-2.5 text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="text-base font-bold">
+                Your withdrawal has been approved
+              </h3>
+            </div>
+            {withdrawalStatus?.rejectionNote && (
+              <div className="mt-3 rounded-lg border border-emerald-200/80 bg-white/70 p-3.5 dark:border-emerald-900/40 dark:bg-emerald-900/10">
+                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-300">
+                  Response from university:
+                </p>
+                <p className="mt-1 text-xs italic text-[var(--text-secondary)]">
+                  "{withdrawalStatus.rejectionNote}"
+                </p>
+              </div>
+            )}
+            <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              Enrollment status is now marked as <strong>Withdrawn</strong>.
+              {withdrawalStatus?.reviewedAt && ` • Reviewed on: ${formatDate(withdrawalStatus.reviewedAt)}`}
+            </p>
+          </div>
+        )}
+
+        {/* Rejected Card */}
+        {isRejected && (
+          <div className="rounded-xl border border-rose-300 bg-rose-50/70 p-5 dark:border-rose-800/40 dark:bg-rose-950/20 shadow-sm">
+            <div className="flex items-center gap-2.5 text-rose-800 dark:text-rose-300">
+              <XCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+              <h3 className="text-base font-bold">
+                Your withdrawal request was rejected
+              </h3>
+            </div>
+            {withdrawalStatus?.rejectionNote && (
+              <div className="mt-3 rounded-lg border border-rose-200/80 bg-white/70 p-3.5 dark:border-rose-900/40 dark:bg-rose-900/10">
+                <p className="text-xs font-semibold text-rose-900 dark:text-rose-300">
+                  Response message from university:
+                </p>
+                <p className="mt-1 text-xs italic text-[var(--text-secondary)]">
+                  "{withdrawalStatus.rejectionNote}"
+                </p>
+              </div>
+            )}
+            <p className="mt-3 text-xs font-medium text-rose-700 dark:text-rose-400">
+              Your enrollment remains <strong>Active</strong>. You may submit a new request if needed.
+              {withdrawalStatus?.reviewedAt && ` • Reviewed on: ${formatDate(withdrawalStatus.reviewedAt)}`}
+            </p>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* SECTION 2: WITHDRAWAL REQUEST (Only if status = active)          */}
+        {/* ================================================================= */}
+        {enrollment.status === 'active' && !isWithdrawalPending && (
+          <Card className="shadow-sm border-[var(--border)]">
+            <div className="border-b border-[var(--border)] pb-4">
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                Request Withdrawal
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">
+                Submitting a withdrawal request initiates the formal process to discontinue your studies at this institution. Your request will be sent to the university administration for review.
+              </p>
+            </div>
+
+            <div className="pt-5 space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-[var(--text-secondary)]">
+                    Reason for withdrawal <span className="text-rose-500">*</span>
+                  </label>
+                  <span
+                    className={cn(
+                      'text-[11px] font-medium',
+                      withdrawalReason.trim().length < 20
+                        ? 'text-rose-500'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    )}
+                  >
+                    {withdrawalReason.trim().length} / 20 min characters
+                  </span>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Program</p>
-                  <p className="text-sm text-[var(--text-primary)]">
-                    {profile.current_enrollment.program}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Major</p>
-                  <p className="text-sm text-[var(--text-primary)]">
-                    {profile.current_enrollment.major || <span className="text-[var(--text-muted)] italic">Not assigned yet</span>}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Batch</p>
-                  <p className="text-sm text-[var(--text-primary)]">
-                    {profile.current_enrollment.batch || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Enrolled</p>
-                  <p className="text-sm text-[var(--text-primary)]">
-                    {profile.current_enrollment.enrollment_date ? formatDate(profile.current_enrollment.enrollment_date) : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Expected Graduation</p>
-                  <p className="text-sm text-[var(--text-primary)]">
-                    {profile.current_enrollment.expected_graduation_date ? formatDate(profile.current_enrollment.expected_graduation_date) : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">Status</p>
-                  <Badge variant={profile.current_enrollment.status === 'withdrawal_requested' ? 'warning' : 'success'}>
-                    {profile.current_enrollment.status === 'withdrawal_requested' ? 'WITHDRAWAL PENDING' : 'ACTIVE'}
-                  </Badge>
-                </div>
+                <textarea
+                  rows={4}
+                  value={withdrawalReason}
+                  onChange={(e) => setWithdrawalReason(e.target.value)}
+                  placeholder="Please state your reasons for requesting withdrawal in detail (min 20 characters)..."
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 text-sm text-[var(--text-primary)] outline-none transition-all focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10"
+                />
               </div>
 
-              {profile.current_enrollment.status === 'active' && (
-                <div className="flex gap-4 pt-[24px] border-t border-[var(--border)]">
-                  <Button variant="secondary" onClick={() => setShowExtensionModal(true)}>
-                    Request Extension
-                  </Button>
-                  <Button variant="ghost" onClick={() => setShowWithdrawalModal(true)} className="!text-[var(--danger)] hover:!bg-[var(--danger)] hover:!text-white">
-                    Request Withdrawal
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ) : (
-            <Card>
-              <EmptyState 
-                title="You are not currently enrolled" 
-                message="Find an approved university and submit an enrollment application to get started." 
-                icon={Building2}
-                action={
-                  <Button onClick={() => navigate('/student/universities')}>
-                    Browse Universities
-                  </Button>
-                }
-              />
-            </Card>
-          )}
-        </div>
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowConfirmModal(true)}
+                  disabled={withdrawalReason.trim().length < 20}
+                  className="border-[var(--border-strong)] text-[var(--text-primary)] hover:border-rose-400 hover:text-rose-600"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Withdrawal Request
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
-        {/* Section 2: Enrollment Applications */}
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-[24px]">Enrollment Applications</h2>
-          <div className="space-y-[16px]">
-            {enrollmentApplications.length > 0 ? (
-              enrollmentApplications.map((application) => (
-                <Card key={application.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[var(--border)] shadow-none bg-[var(--bg-surface)] hover:border-[var(--brand-light)] transition-colors">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-base font-semibold text-[var(--text-primary)]">{application.institution_name}</h3>
-                      <Badge variant={application.status === 'approved' ? 'success' : application.status === 'rejected' ? 'danger' : 'warning'}>
-                        {application.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-[var(--text-secondary)]">{application.certificate_level} in {application.department} • {application.batch}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">
-                      Applied on {formatDate(application.created_at)}
-                    </p>
-                    {application.university_response && (
-                      <div className="mt-3 text-sm text-[var(--text-secondary)] bg-[var(--bg-body)] dark:bg-gray-800/50 p-3 rounded-lg border border-[var(--border)]">
-                        <strong className="text-[var(--text-primary)]">University Note: </strong> {application.university_response}
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <EmptyState title="No applications" message="You have not submitted any enrollment applications." icon={FileText} />
-            )}
-          </div>
-        </div>
+        {/* Confirm Dialog Modal */}
+        <ConfirmModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleConfirmWithdrawal}
+          title="Confirm Withdrawal Request"
+          message="Are you sure? Your enrollment will be marked as pending withdrawal. The university will review and respond."
+          confirmText="Confirm Request"
+          confirmVariant="warning"
+          isDestructive={false}
+          loading={isSubmittingWithdrawal}
+        />
 
-        {/* Section 3: Enrollment History */}
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-[24px]">Enrollment History</h2>
-          <div className="space-y-[16px]">
-            {enrollmentHistory.length > 0 ? (
-              enrollmentHistory.map((enrollment) => (
-                <Card key={enrollment.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[var(--border)] shadow-none bg-[var(--bg-surface)] hover:border-[var(--brand-light)] transition-colors">
-                  <div>
-                    <h3 className="text-base font-semibold text-[var(--text-primary)]">{enrollment.institution_name}</h3>
-                    <p className="text-sm text-[var(--text-secondary)] mt-1">{enrollment.program} • {enrollment.batch}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">
-                      {enrollment.status === 'withdrawn' ? 'Withdrawn' : 'Graduated'}: {enrollment.end_date ? formatDate(enrollment.end_date) : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <Badge variant={enrollment.status === 'withdrawn' ? 'danger' : 'success'}>
-                      {(enrollment.status || 'Graduated').toUpperCase()}
-                    </Badge>
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <EmptyState title="No history" message="Your past enrollments will appear here once you graduate or withdraw." icon={Clock} />
-            )}
-          </div>
-        </div>
+        {/* Cancel Withdrawal Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={handleCancelWithdrawal}
+          title="Cancel Withdrawal Request"
+          message="Are you sure you want to cancel your withdrawal request? The request will be withdrawn and your enrollment will remain active."
+          confirmText="Yes, Cancel Request"
+          confirmVariant="danger"
+          isDestructive={true}
+          loading={isCancellingWithdrawal}
+        />
       </div>
-
-      {showWithdrawalModal && profile?.current_enrollment && (
-        <WithdrawalRequestModal
-          enrollment={profile.current_enrollment}
-          onClose={() => setShowWithdrawalModal(false)}
-          onSuccess={() => {
-            setShowWithdrawalModal(false);
-            loadData();
-          }}
-        />
-      )}
-
-      {showExtensionModal && profile?.current_enrollment && (
-        <ExtensionRequestModal
-          enrollment={profile.current_enrollment}
-          onClose={() => setShowExtensionModal(false)}
-          onSuccess={() => {
-            setShowExtensionModal(false);
-            loadData();
-          }}
-        />
-      )}
-
-      {showProgramChangeModal && profile?.current_enrollment && (
-        <ProgramChangeRequestModal
-          enrollment={profile.current_enrollment}
-          onClose={() => setShowProgramChangeModal(false)}
-          onSuccess={() => {
-            setShowProgramChangeModal(false);
-            loadData();
-          }}
-        />
-      )}
     </DashboardLayout>
-  );
-}
-
-// ─── WITHDRAWAL MODAL ──────────────────────────────────────
-function WithdrawalRequestModal({ enrollment, onClose, onSuccess }) {
-  const [reason, setReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
-    try {
-      const { data } = await api.post('/student/withdrawal/request', {
-        enrollment_id: enrollment.id,
-        reason,
-      });
-      toast.success(data.message || 'Withdrawal request submitted');
-      onSuccess();
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to submit withdrawal request';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Modal open={true} onClose={onClose} title="Request Withdrawal">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-2xl bg-red-50 p-4 dark:bg-red-900/20">
-          <p className="text-sm font-semibold text-[var(--danger)]">You are requesting withdrawal from:</p>
-          <p className="mt-1 font-medium text-[var(--text-primary)]">{enrollment.institution_name}</p>
-          <p className="text-sm text-[var(--text-secondary)]">{enrollment.program} • {enrollment.batch}</p>
-        </div>
-        <div className="rounded-2xl border border-[var(--warning)] bg-yellow-50 p-4 dark:bg-yellow-900/20">
-          <p className="text-sm text-[var(--warning)]">
-            <strong>Note:</strong> Your withdrawal request will be sent to the university for review.
-          </p>
-        </div>
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 dark:border-red-900/30 dark:bg-red-900/20">
-            <p className="text-sm text-[var(--danger)]">{error}</p>
-          </div>
-        )}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--text-primary)]">
-            Reason for Withdrawal <span className="text-[var(--danger)]">*</span>
-          </label>
-          <textarea
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-2 text-sm focus:border-[var(--brand)] focus:outline-none min-h-[120px] text-[var(--text-primary)]"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Please explain why you want to withdraw..."
-            required
-            minLength={20}
-            maxLength={1000}
-          />
-          <p className="text-sm text-[var(--text-muted)] mt-1">{reason.length}/1000 characters</p>
-        </div>
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="danger" loading={submitting} className="flex-1">
-            <LogOut className="mr-2 h-4 w-4" />
-            Submit Withdrawal Request
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-// ─── EXTENSION REQUEST MODAL ──────────────────────────────────────
-function ExtensionRequestModal({ enrollment, onClose, onSuccess }) {
-  const [requestedDate, setRequestedDate] = useState('');
-  const [reason, setReason] = useState('');
-  const [file, setFile] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const minDate = enrollment.expected_graduation_date
-    ? (() => {
-        const d = new Date(enrollment.expected_graduation_date);
-        d.setDate(d.getDate() + 1);
-        return d.toISOString().split('T')[0];
-      })()
-    : new Date().toISOString().split('T')[0];
-
-  const handleFileChange = (e) => {
-    const selected = e.target.files?.[0];
-    if (selected) {
-      if (selected.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
-        e.target.value = '';
-        return;
-      }
-      const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowed.includes(selected.type)) {
-        toast.error('Only PDF, JPG, and PNG files are allowed');
-        e.target.value = '';
-        return;
-      }
-      setFile(selected);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
-
-    try {
-      const formData = new FormData();
-      formData.append('enrollment_id', enrollment.id);
-      formData.append('requested_graduation_date', requestedDate);
-      formData.append('reason', reason);
-      if (file) {
-        formData.append('supporting_document', file);
-      }
-
-      const { data } = await api.post('/student/extension-requests', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      toast.success(data.message || 'Extension request submitted');
-      onSuccess();
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to submit extension request';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Modal open={true} onClose={onClose} title="Request Graduation Extension">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-2xl bg-blue-50 p-4 dark:bg-blue-900/20">
-          <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Requesting extension for:</p>
-          <p className="mt-1 font-medium text-[var(--text-primary)]">{enrollment.institution_name}</p>
-          <p className="text-sm text-[var(--text-secondary)]">{enrollment.program} • {enrollment.batch}</p>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Current expected graduation:{' '}
-            <span className="font-semibold text-[var(--text-primary)]">
-              {enrollment.expected_graduation_date
-                ? formatDate(enrollment.expected_graduation_date)
-                : 'N/A'}
-            </span>
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--warning)] bg-yellow-50 p-4 dark:bg-yellow-900/20">
-          <p className="text-sm text-[var(--warning)]">
-            <strong>Note:</strong> Your extension request will be sent to the university for review.
-          </p>
-        </div>
-
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 dark:border-red-900/30 dark:bg-red-900/20">
-            <p className="text-sm text-[var(--danger)]">{error}</p>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--text-primary)]">
-            Requested New Graduation Date <span className="text-[var(--danger)]">*</span>
-          </label>
-          <input
-            type="date"
-            className="block w-full rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
-            value={requestedDate}
-            onChange={(e) => setRequestedDate(e.target.value)}
-            min={minDate}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--text-primary)]">
-            Reason for Extension <span className="text-[var(--danger)]">*</span>
-          </label>
-          <textarea
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-2 text-sm focus:border-[var(--brand)] focus:outline-none min-h-[120px] text-[var(--text-primary)]"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Please provide details..."
-            required
-            minLength={20}
-            maxLength={1000}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--text-primary)]">
-            Supporting Document <span className="text-[var(--text-muted)]">(Optional)</span>
-          </label>
-          <input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-[var(--text-primary)]"
-          />
-        </div>
-
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={submitting} className="flex-1">
-            <CalendarPlus className="mr-2 h-4 w-4" />
-            Submit Request
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-// ─── PROGRAM CHANGE MODAL ──────────────────────────────────────
-function ProgramChangeRequestModal({ enrollment, onClose, onSuccess }) {
-  // Mocked for completion; retaining prop signatures
-  return (
-    <Modal open={true} onClose={onClose} title="Request Program Change">
-      <div className="p-4 text-center">
-        <p className="text-[var(--text-secondary)]">Program change functionality is currently under maintenance.</p>
-        <div className="mt-4">
-          <Button onClick={onClose}>Close</Button>
-        </div>
-      </div>
-    </Modal>
   );
 }

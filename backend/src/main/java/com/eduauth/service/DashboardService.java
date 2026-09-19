@@ -21,6 +21,7 @@ public class DashboardService {
     private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final VerificationLogRepository verificationLogRepository;
     private final UserRepository userRepository;
+    private final InstitutionRepository institutionRepository;
 
     public StudentDashboardDto getStudentDashboardStats(User user) {
         StudentDashboardDto dto = new StudentDashboardDto();
@@ -34,19 +35,29 @@ public class DashboardService {
         dto.setPendingAccessRequests(accessRequestRepository.countByStudentIdAndStatus(studentId, "pending"));
         dto.setActiveAccessGrants(accessGrantRepository.countActiveGrantsForStudent(studentId, LocalDateTime.now()));
         
-        enrollmentRepository.findFirstByStudentIdAndStatusOrderByEnrollmentDateDesc(studentId, "active")
-            .ifPresent(enrollment -> {
-                StudentDashboardDto.CurrentEnrollmentDto curr = new StudentDashboardDto.CurrentEnrollmentDto();
-                if (enrollment.getInstitution() != null) {
-                    curr.setInstitutionName(enrollment.getInstitution().getName());
-                }
-                curr.setProgram(enrollment.getProgram());
-                curr.setBatch(enrollment.getBatch());
-                curr.setStatus(enrollment.getStatus());
-                curr.setEnrollmentDate(enrollment.getEnrollmentDate());
-                curr.setExpectedGraduationDate(enrollment.getExpectedGraduationDate());
-                dto.setCurrentEnrollment(curr);
-            });
+        // Find active or withdrawal_requested enrollment
+        Enrollment enrollment = enrollmentRepository.findActiveByStudentId(studentId).orElse(null);
+        if (enrollment == null) {
+            enrollment = enrollmentRepository.findFirstByStudentIdAndStatusOrderByEnrollmentDateDesc(studentId, "active").orElse(null);
+        }
+
+        if (enrollment != null) {
+            StudentDashboardDto.CurrentEnrollmentDto curr = new StudentDashboardDto.CurrentEnrollmentDto();
+            Institution inst = institutionRepository.findById(enrollment.getInstitutionId()).orElse(null);
+            curr.setInstitutionName(inst != null ? inst.getName() : "University");
+            curr.setEnrollmentNumber(enrollment.getEnrollmentNumber());
+            curr.setProgram(enrollment.getProgram());
+            curr.setBatch(enrollment.getBatch());
+
+            boolean isWithdrawalPending = withdrawalRequestRepository
+                    .existsByEnrollmentIdAndStatus(enrollment.getId(), "pending");
+            curr.setStatus(isWithdrawalPending ? "withdrawal_requested" : enrollment.getStatus());
+            curr.setEnrollmentDate(enrollment.getEnrollmentDate());
+            curr.setExpectedGraduationDate(enrollment.getExpectedGraduationDate());
+            dto.setCurrentEnrollment(curr);
+        } else {
+            dto.setCurrentEnrollment(null);
+        }
             
         return dto;
     }
@@ -96,6 +107,7 @@ public class DashboardService {
         dto.setTotalUniversities(userRepository.countByRole("university"));
         dto.setTotalStudents(userRepository.countByRole("student"));
         dto.setTotalVerifiers(userRepository.countByRole("verifier"));
+        dto.setTotalEnrollments(enrollmentRepository.countByStatus("active"));
         
         return dto;
     }

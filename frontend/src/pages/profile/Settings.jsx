@@ -56,7 +56,13 @@ export default function Settings() {
   }, [searchParams]);
 
   const [settings, setSettings] = useState(null);
-  const [account, setAccount] = useState(null);
+  const [account, setAccount] = useState(() => (user ? {
+    email: user.email,
+    role: user.role,
+    is_approved: user.is_approved ?? user.isApproved ?? true,
+    email_verified_at: user.email_verified_at ?? user.emailVerifiedAt,
+    created_at: user.created_at ?? user.createdAt,
+  } : null));
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved
   const [activities, setActivities] = useState([]);
@@ -82,9 +88,19 @@ export default function Settings() {
       try {
         const { data } = await api.get('/settings');
         setSettings(data.settings);
-        setAccount(data.account);
+        if (data.account) {
+          setAccount(data.account);
+        } else if (user) {
+          setAccount({
+            email: user.email,
+            role: user.role,
+            is_approved: user.is_approved ?? user.isApproved ?? true,
+            email_verified_at: user.email_verified_at ?? user.emailVerifiedAt,
+            created_at: user.created_at ?? user.createdAt,
+          });
+        }
         // Initialise preferences draft from loaded settings
-        setPrefsDraft(JSON.parse(JSON.stringify(data.settings)));
+        setPrefsDraft(JSON.parse(JSON.stringify(data.settings || {})));
       } catch {
         toast.error('Failed to load settings.');
       } finally {
@@ -92,7 +108,7 @@ export default function Settings() {
       }
     };
     load();
-  }, []);
+  }, [user]);
 
   // ─── Load institution authority fields (university only) ──
   useEffect(() => {
@@ -216,12 +232,20 @@ export default function Settings() {
   const handleReset = async () => {
     try {
       const { data } = await api.post('/settings/reset');
-      setSettings(data.settings);
-      setPrefsDraft(JSON.parse(JSON.stringify(data.settings)));
+      let newSettings = data?.settings;
+      if (!newSettings) {
+        const freshRes = await api.get('/settings');
+        newSettings = freshRes.data?.settings;
+      }
+      if (newSettings) {
+        setSettings(newSettings);
+        setPrefsDraft(JSON.parse(JSON.stringify(newSettings)));
+      }
       setShowResetModal(false);
-      toast.success('Settings reset to defaults.');
-    } catch {
-      toast.error('Failed to reset settings.');
+      toast.success(data?.message || 'Settings reset to defaults.');
+    } catch (err) {
+      console.error('Failed to reset settings:', err);
+      toast.error(err.response?.data?.message || 'Failed to reset settings.');
     }
   };
 
@@ -440,11 +464,11 @@ export default function Settings() {
               <Card>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Account Information</h2>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <InfoRow label="Email" value={account?.email} />
-                  <InfoRow label="Role" value={account?.role?.charAt(0).toUpperCase() + account?.role?.slice(1)} />
-                  <InfoRow label="Status" value={account?.is_approved ? 'Approved' : 'Pending Approval'} />
-                  <InfoRow label="Email Verified" value={account?.email_verified_at ? formatDate(account.email_verified_at) : 'Not verified'} />
-                  <InfoRow label="Member Since" value={account?.created_at ? formatDate(account.created_at) : '-'} />
+                  <InfoRow label="Email" value={account?.email || user?.email || '-'} />
+                  <InfoRow label="Role" value={(account?.role || user?.role) ? ((account?.role || user?.role).charAt(0).toUpperCase() + (account?.role || user?.role).slice(1)) : '-'} />
+                  <InfoRow label="Status" value={(account?.is_approved ?? user?.is_approved ?? user?.isApproved) ? 'Approved' : 'Pending Approval'} />
+                  <InfoRow label="Email Verified" value={(account?.email_verified_at || user?.email_verified_at || user?.emailVerifiedAt) ? formatDate(account?.email_verified_at || user?.email_verified_at || user?.emailVerifiedAt) : ((account?.email_verified || user?.email_verified || user?.emailVerified) ? 'Verified' : 'Not verified')} />
+                  <InfoRow label="Member Since" value={(account?.created_at || user?.created_at || user?.createdAt) ? formatDate(account?.created_at || user?.created_at || user?.createdAt) : '-'} />
                 </div>
               </Card>
 

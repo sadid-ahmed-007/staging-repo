@@ -24,14 +24,14 @@ export function NotificationProvider({ children }) {
     }
     try {
       const { data } = await api.get('/notifications/unread-count');
-      setUnreadCount(data.unread_count ?? 0);
+      setUnreadCount(data.count ?? 0);
     } catch {
       // Silently fail — badge will stay at last known value
     }
   }, [user]);
 
   const startPolling = useCallback(() => {
-    intervalRef.current = setInterval(refreshCount, 60000);
+    intervalRef.current = setInterval(refreshCount, 30000);
   }, [refreshCount]);
 
   const stopPolling = useCallback(() => {

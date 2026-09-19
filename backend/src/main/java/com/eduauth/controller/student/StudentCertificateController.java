@@ -113,6 +113,7 @@ public class StudentCertificateController {
         // Student info
         Map<String, Object> studentInfo = new LinkedHashMap<>();
         studentInfo.put("id",        student.getId());
+        studentInfo.put("name",      cert.getStudentDisplayName());
         studentInfo.put("firstName",  student.getFirstName());
         studentInfo.put("lastName",   student.getLastName());
         studentInfo.put("email",      user.getEmail());
@@ -138,6 +139,11 @@ public class StudentCertificateController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id",                  cert.getId());
         data.put("serial",              cert.getSerial());
+        data.put("issuedName",          cert.getIssuedName());
+        data.put("studentName",         cert.getStudentDisplayName());
+        data.put("student_name",        cert.getStudentDisplayName());
+        data.put("institutionName",     cert.getInstitution() != null ? cert.getInstitution().getName() : null);
+        data.put("institution_name",    cert.getInstitution() != null ? cert.getInstitution().getName() : null);
         data.put("certificateLevel",    cert.getCertificateLevel());
         data.put("certificateName",     cert.getCertificateName());
         data.put("department",          cert.getDepartment());
@@ -224,4 +230,44 @@ public class StudentCertificateController {
                 "isPubliclyShareable", shareable
         ));
     }
+
+    // ── GET /api/student/certificates/{id}/share-link ─────────────────────────
+
+    /**
+     * Returns the public verification share link for a certificate.
+     *
+     * The link embeds the serial number and an AES-256 encrypted DOB token so
+     * that the verifier page can auto-verify without the student manually entering
+     * their date of birth.
+     *
+     * Format: http://localhost:5173/verify?s={serial}&v={encryptedDob}
+     */
+    @GetMapping("/{id}/share-link")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getShareLink(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+
+        Student student = studentRepository.findByUserId(user.getId()).orElse(null);
+        if (student == null) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Student profile not found"));
+        }
+
+        Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
+        if (cert == null || !cert.getStudentId().equals(student.getId())) {
+            return ResponseEntity.status(cert == null ? 404 : 403)
+                    .body(Map.of("success", false,
+                                 "message", cert == null ? "Certificate not found"
+                                                         : "Access denied"));
+        }
+
+        String shareLink = certificateService.buildShareLink(cert);
+
+        return ResponseEntity.ok(Map.of(
+                "success",   true,
+                "shareLink", shareLink
+        ));
+    }
 }
+

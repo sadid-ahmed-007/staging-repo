@@ -15,9 +15,9 @@ import SelectField from '../../components/shared/SelectField';
 import ToggleSwitch from '../../components/shared/ToggleSwitch';
 import CertificateDetailModal from '../../components/certificates/CertificateDetailModal';
 import api from '../../services/api';
-import { formatDate } from '../../utils/helpers';
+import { formatDate, cn } from '../../utils/helpers';
 import { downloadCertificatePDF, previewCertificatePDF } from '../../services/certificateService';
-import { FileText, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Download, RefreshCw, Loader2, Globe, Shield, Award, X } from 'lucide-react';
 
 export default function StudentCertificates() {
   const [certificates, setCertificates] = useState([]);
@@ -30,11 +30,54 @@ export default function StudentCertificates() {
   const [copiedSerial, setCopiedSerial] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // URL search params sync
+  const [searchParams, setSearchParams] = useSearchParams();
+  const visibilityParam = searchParams.get('visibility') || searchParams.get('filter');
+  const [visibilityFilter, setVisibilityFilter] = useState(
+    ['all', 'public', 'private'].includes(visibilityParam?.toLowerCase())
+      ? visibilityParam.toLowerCase()
+      : 'all'
+  );
+
   // Status filter and search
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Keep state synced with URL changes (e.g. back/forward or clicking dashboard links)
+  useEffect(() => {
+    const param = searchParams.get('visibility') || searchParams.get('filter');
+    if (param && ['all', 'public', 'private'].includes(param.toLowerCase())) {
+      setVisibilityFilter(param.toLowerCase());
+    } else if (!param) {
+      setVisibilityFilter('all');
+    }
+  }, [searchParams]);
+
+  const handleVisibilityChange = (newVisibility) => {
+    setVisibilityFilter(newVisibility);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newVisibility === 'all') {
+        next.delete('visibility');
+        next.delete('filter');
+      } else {
+        next.set('visibility', newVisibility);
+        next.delete('filter');
+      }
+      return next;
+    });
+  };
+
+  // Certificate counts for convenient tabs
+  const totalCount = certificates.length;
+  const publicCount = certificates.filter((c) => Boolean(c.isPubliclyShareable)).length;
+  const privateCount = certificates.filter((c) => !c.isPubliclyShareable).length;
+
   const filteredCertificates = certificates.filter((cert) => {
+    // Apply visibility filter
+    if (visibilityFilter === 'public' && !cert.isPubliclyShareable) return false;
+    if (visibilityFilter === 'private' && cert.isPubliclyShareable) return false;
+
     // Apply status filter
     if (statusFilter === 'active' && cert.status === 'revoked') return false;
     if (statusFilter === 'revoked' && cert.status !== 'revoked') return false;
@@ -59,7 +102,7 @@ export default function StudentCertificates() {
     setLoading(true);
     try {
       setError('');
-      const { data } = await api.get('/student/certificates');
+      const { data } = await api.get('/student/certificates', { params: { size: 100 } });
       if (data.success) {
         setCertificates(data.data || []);
       } else {
@@ -82,22 +125,10 @@ export default function StudentCertificates() {
     try {
       setDownloadingId(certificate.id);
       await downloadCertificatePDF(certificate.id, certificate.serial, '/student/certificates');
-      toast.success('Certificate downloaded successfully');
+      toast.success('Certificate downloaded');
     } catch (err) {
       console.error('Failed to download certificate:', err);
-      let errorMsg = 'Failed to download certificate';
-      if (err?.response?.data instanceof Blob) {
-        try {
-          const text = await err.response.data.text();
-          const json = JSON.parse(text);
-          errorMsg = json.error || json.message || errorMsg;
-        } catch (e) {
-          errorMsg = err.message;
-        }
-      } else {
-        errorMsg = err?.response?.data?.message || err.message || errorMsg;
-      }
-      toast.error(errorMsg);
+      toast.error('Failed to download certificate. Try again.');
     } finally {
       setDownloadingId(null);
     }
@@ -109,23 +140,9 @@ export default function StudentCertificates() {
       toast.success('Certificate preview opened in a new tab');
     } catch (err) {
       console.error('Failed to preview certificate:', err);
-      let errorMsg = 'Failed to preview certificate';
-      if (err?.response?.data instanceof Blob) {
-        try {
-          const text = await err.response.data.text();
-          const json = JSON.parse(text);
-          errorMsg = json.error || json.message || errorMsg;
-        } catch (e) {
-          errorMsg = err.message;
-        }
-      } else {
-        errorMsg = err?.response?.data?.message || err.message || errorMsg;
-      }
-      toast.error(errorMsg);
+      toast.error('Failed to preview certificate');
     }
   };
-
-
 
   const openCertificateDetails = async (certificateListObj) => {
     setDetailsLoading(true);
@@ -150,20 +167,36 @@ export default function StudentCertificates() {
   };
 
   const toggleVisibility = async (certificateId, currentStatus) => {
+    const newStatus = !currentStatus;
+
+    // Immediate optimistic UI update
+    setCertificates((current) =>
+      current.map((cert) =>
+        cert.id === certificateId ? { ...cert, isPubliclyShareable: newStatus } : cert
+      )
+    );
+    setSelectedCertificate((prev) =>
+      prev && prev.id === certificateId ? { ...prev, isPubliclyShareable: newStatus } : prev
+    );
+
+    // API call in background
     try {
-      const newStatus = !currentStatus;
       const { data } = await api.patch(`/student/certificates/${certificateId}/visibility`, {
         isPubliclyShareable: newStatus
       });
       if (data.success) {
-        setCertificates((current) =>
-          current.map((cert) =>
-            cert.id === certificateId ? { ...cert, isPubliclyShareable: newStatus } : cert
-          )
-        );
-        toast.success(`Certificate marked as ${newStatus ? 'public' : 'private'}`);
+        toast.success(`Certificate set to ${newStatus ? 'Public' : 'Private'}`);
       }
     } catch (err) {
+      // Revert the toggle on failure + show error toast
+      setCertificates((current) =>
+        current.map((cert) =>
+          cert.id === certificateId ? { ...cert, isPubliclyShareable: currentStatus } : cert
+        )
+      );
+      setSelectedCertificate((prev) =>
+        prev && prev.id === certificateId ? { ...prev, isPubliclyShareable: currentStatus } : prev
+      );
       console.error('Failed to toggle visibility:', err);
       toast.error(err.response?.data?.message || 'Failed to update certificate visibility');
     }
@@ -186,6 +219,75 @@ export default function StudentCertificates() {
           </div>
         </div>
 
+        {/* Visibility / Filter Tabs */}
+        <div className="flex border-b border-[var(--border)] gap-2 sm:gap-6 overflow-x-auto pb-px scrollbar-hide">
+          <button
+            type="button"
+            onClick={() => handleVisibilityChange('all')}
+            className={cn(
+              "pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap",
+              visibilityFilter === 'all'
+                ? "border-[var(--brand)] text-[var(--brand)] font-semibold"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)]"
+            )}
+          >
+            <Award className="h-4 w-4" />
+            <span>All Certificates</span>
+            <span className={cn(
+              "ml-1 text-xs px-2 py-0.5 rounded-full font-medium transition-colors",
+              visibilityFilter === 'all'
+                ? "bg-[var(--brand-light)]/20 text-[var(--brand)] dark:bg-[var(--brand-light)]/10"
+                : "bg-[var(--bg-elevated)] text-[var(--text-muted)]"
+            )}>
+              {totalCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleVisibilityChange('public')}
+            className={cn(
+              "pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap",
+              visibilityFilter === 'public'
+                ? "border-green-500 text-green-600 dark:text-green-400 font-semibold"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)]"
+            )}
+          >
+            <Globe className="h-4 w-4 text-green-500" />
+            <span>Public Certificates</span>
+            <span className={cn(
+              "ml-1 text-xs px-2 py-0.5 rounded-full font-medium transition-colors",
+              visibilityFilter === 'public'
+                ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300"
+                : "bg-[var(--bg-elevated)] text-[var(--text-muted)]"
+            )}>
+              {publicCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleVisibilityChange('private')}
+            className={cn(
+              "pb-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap",
+              visibilityFilter === 'private'
+                ? "border-gray-500 text-gray-800 dark:text-gray-200 font-semibold"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border)]"
+            )}
+          >
+            <Shield className="h-4 w-4 text-gray-500" />
+            <span>Private Certificates</span>
+            <span className={cn(
+              "ml-1 text-xs px-2 py-0.5 rounded-full font-medium transition-colors",
+              visibilityFilter === 'private'
+                ? "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                : "bg-[var(--bg-elevated)] text-[var(--text-muted)]"
+            )}>
+              {privateCount}
+            </span>
+          </button>
+        </div>
+
         {/* Filter Row */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <SearchBar 
@@ -194,7 +296,18 @@ export default function StudentCertificates() {
             placeholder="Search by serial, level, or institution..." 
             className="flex-1"
           />
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-44">
+            <SelectField
+              value={visibilityFilter}
+              onChange={handleVisibilityChange}
+              options={[
+                { value: 'all', label: 'All Visibility' },
+                { value: 'public', label: 'Public Only' },
+                { value: 'private', label: 'Private Only' },
+              ]}
+            />
+          </div>
+          <div className="w-full sm:w-40">
             <SelectField
               value={statusFilter}
               onChange={setStatusFilter}
@@ -205,6 +318,21 @@ export default function StudentCertificates() {
               ]}
             />
           </div>
+          {(visibilityFilter !== 'all' || statusFilter !== 'all' || searchQuery.trim()) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                handleVisibilityChange('all');
+                setStatusFilter('all');
+                setSearchQuery('');
+              }}
+              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] shrink-0"
+            >
+              <X className="w-3.5 h-3.5 mr-1" />
+              Reset
+            </Button>
+          )}
         </div>
 
         {loading ? (
@@ -215,9 +343,28 @@ export default function StudentCertificates() {
           <ErrorMessage message={error} retry={fetchCertificates} />
         ) : filteredCertificates.length === 0 ? (
           <EmptyState
-            title="No Certificates Found"
-            message={searchQuery.trim() ? `No certificates match your search.` : `You don't have any certificates issued yet.`}
+            title={certificates.length === 0 ? "No certificates yet" : "No certificates match filters"}
+            description={
+              certificates.length === 0 
+                ? "You have not been issued any certificates yet." 
+                : `No certificates match your selected ${visibilityFilter !== 'all' ? `"${visibilityFilter}"` : ''} filter options.`
+            }
             icon={FileText}
+            action={
+              certificates.length > 0 ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleVisibilityChange('all');
+                    setStatusFilter('all');
+                    setSearchQuery('');
+                  }}
+                >
+                  Clear all filters
+                </Button>
+              ) : null
+            }
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[24px]">
@@ -225,7 +372,27 @@ export default function StudentCertificates() {
               <Card key={certificate.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
                 {/* Top */}
                 <div className="flex justify-between items-start mb-4">
-                  <Badge variant="primary">{certificate.certificateLevel}</Badge>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Badge variant="primary">{certificate.certificateLevel}</Badge>
+                    <span className={cn(
+                      "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium",
+                      certificate.isPubliclyShareable
+                        ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800/40"
+                        : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                    )}>
+                      {certificate.isPubliclyShareable ? (
+                        <>
+                          <Globe className="w-3 h-3 text-green-600 dark:text-green-400" />
+                          Public
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="w-3 h-3 text-gray-500" />
+                          Private
+                        </>
+                      )}
+                    </span>
+                  </div>
                   <Badge variant={certificate.status === 'revoked' ? 'danger' : 'success'}>
                     {certificate.status === 'revoked' ? 'Revoked' : 'Active'}
                   </Badge>

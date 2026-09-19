@@ -45,7 +45,7 @@ export default function DepartmentsManager() {
 
   const openEditModal = (department) => {
     setEditingDepartment(department);
-    reset({ name: department.name, short_code: department.short_code, is_active: department.is_active });
+    reset({ name: department.name, short_code: department.shortCode, is_active: department.isActive });
     setModalOpen(true);
   };
 
@@ -131,14 +131,14 @@ export default function DepartmentsManager() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {departments.map((dept) => (
-                <tr key={dept.id} className={!dept.is_active ? 'opacity-70' : ''}>
+                <tr key={dept.id} className={!dept.isActive ? 'opacity-70' : ''}>
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                     {dept.name}
                   </td>
-                  <td className="px-4 py-3">{dept.short_code || '-'}</td>
+                  <td className="px-4 py-3">{dept.shortCode || '-'}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={dept.is_active ? 'success' : 'default'}>
-                      {dept.is_active ? 'Active' : 'Inactive'}
+                    <Badge variant={dept.isActive ? 'success' : 'default'}>
+                      {dept.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -146,7 +146,7 @@ export default function DepartmentsManager() {
                       <Button variant="secondary" onClick={() => openEditModal(dept)} className="!p-1.5" title="Edit">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      {dept.is_active ? (
+                      {dept.isActive ? (
                         <Button 
                           variant="danger" 
                           onClick={() => { setDepartmentToDeactivate(dept); setDeactivateModalOpen(true); }}

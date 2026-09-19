@@ -7,6 +7,7 @@ import com.eduauth.repository.ActivityLogRepository;
 import com.eduauth.repository.UserRepository;
 import com.eduauth.service.EmailService;
 import com.eduauth.service.JwtService;
+import com.eduauth.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +26,7 @@ public class AdminUserController {
     private final EmailService emailService;
     private final JwtService jwtService;
     private final com.eduauth.service.AdminUserService adminUserService;
+    private final NotificationService notificationService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -34,13 +36,50 @@ public class AdminUserController {
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
-        return ResponseEntity.ok(Map.of("success", true, "data", adminUserService.getUsers(status, role, search, page, size)));
+        long pendingCount = userRepository.countByIsApprovedFalseAndEmailVerifiedAtIsNotNull();
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", adminUserService.getUsers(status, role, search, page, size),
+                "pending_count", pendingCount
+        ));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getUserDetails(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of("success", true, "data", adminUserService.getUserDetails(id)));
+        var userDetails = adminUserService.getUserDetails(id);
+        return ResponseEntity.ok(Map.of("success", true, "data", userDetails, "user", userDetails));
+    }
+
+    @GetMapping("/{id}/activity")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUserActivity(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "15", name = "per_page", required = false) int perPage) {
+
+        int pageIndex = Math.max(0, page - 1);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(pageIndex, perPage);
+        org.springframework.data.domain.Page<ActivityLog> paged = activityLogRepository.findByUserIdOrderByCreatedAtDesc(id, pageable);
+
+        var list = paged.getContent().stream().map(a -> {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id", a.getId());
+            m.put("action", a.getAction() != null ? a.getAction().toLowerCase() : "action");
+            m.put("description", a.getDescription());
+            m.put("created_at", a.getCreatedAt());
+            m.put("ip_address", a.getIpAddress());
+            return m;
+        }).toList();
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "data", list,
+                "current_page", paged.getNumber() + 1,
+                "last_page", Math.max(1, paged.getTotalPages()),
+                "total", paged.getTotalElements(),
+                "per_page", perPage
+        ));
     }
 
     @PostMapping("/{id}/suspend")
@@ -88,6 +127,16 @@ public class AdminUserController {
         }
         
         emailService.sendApprovalEmail(user.getEmail(), name);
+
+        // Notify user: ACCOUNT_APPROVED
+        notificationService.createNotification(
+                id,
+                "ACCOUNT_APPROVED",
+                "Account Approved",
+                "Your account has been approved. You can now log in and use the platform.",
+                "/dashboard",
+                Map.of("userId", id)
+        );
 
         return ResponseEntity.ok(Map.of("success", true, "message", "User approved successfully"));
     }

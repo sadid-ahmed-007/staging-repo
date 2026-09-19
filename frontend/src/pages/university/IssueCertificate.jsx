@@ -1,785 +1,1439 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Download, Lock, Info } from 'lucide-react';
-import Select from 'react-select';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import AsyncSelect from 'react-select/async';
 import debounce from 'lodash/debounce';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import toast from 'react-hot-toast';
+import {
+  Award,
+  UploadCloud,
+  FileText,
+  Download,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  Search,
+  User,
+  GraduationCap,
+  Calendar,
+  Building2,
+  ShieldCheck,
+  Clock,
+  Sparkles,
+  Info
+} from 'lucide-react';
+
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Card from '../../components/shared/Card';
 import Input from '../../components/shared/Input';
 import Button from '../../components/shared/Button';
+import Badge from '../../components/shared/Badge';
+import Modal from '../../components/shared/Modal';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
-import SelectField from '../../components/shared/SelectField';
-import api, { cachedGet } from '../../services/api';
-import toast from 'react-hot-toast';
-import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
 
-// Helper: parse DD/MM/YYYY from a date input value (YYYY-MM-DD) for display
-const toDisplayDate = (isoStr) => {
-  if (!isoStr) return '';
-  const [y, m, d] = isoStr.split('-');
-  return `${d}/${m}/${y}`;
-};
 
-// Helper: convert YYYY-MM-DD (native date input) to DD/MM/YYYY for API
-const toApiDate = (inputVal) => {
-  if (!inputVal) return '';
-  const [y, m, d] = inputVal.split('-');
-  return `${d}/${m}/${y}`;
-};
+export default function IssueCertificate() {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-const certificateSchema = yup.object().shape({
-  student_id: yup.number().required('Please select a student').typeError('Please select a student'),
-  certificate_level_id: yup.number().required('Certificate level is required').typeError('Certificate level is required'),
-  department_id: yup.number().required('Department is required').typeError('Department is required'),
-  major_id: yup.number().nullable().transform((v, o) => (o === '' ? null : v)),
-  session: yup.string().required('Academic session is required'),
-  cgpa: yup
-    .number()
-    .transform((value, originalValue) => (originalValue === '' ? null : value))
-    .nullable()
-    .min(0, 'CGPA cannot be negative')
-    .max(4.0, 'CGPA cannot exceed 4.0'),
-  degree_class: yup.string().nullable(),
-  issue_date: yup.string().required('Issue date is required'),
-  convocation_date: yup.string().nullable(),
-  authority_name: yup.string().required('Authority name is required'),
-  authority_title: yup.string().required('Authority title is required'),
-});
+  // Active tab: 'single' | 'batch'
+  const [activeTab, setActiveTab] = useState('single');
 
-/* ─── Read-only locked field ─────────────────────────────────────────────── */
-function LockedField({ label, value, tooltip }) {
+  // University Profile defaults
+  const [universityProfile, setUniversityProfile] = useState(null);
+  const [defaultAuthorityName, setDefaultAuthorityName] = useState('');
+  const [defaultAuthorityTitle, setDefaultAuthorityTitle] = useState('');
+  const [certificateLevels, setCertificateLevels] = useState([]);
+
+  // ---------------------------------------------------------------------------
+  // Load University Profile
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get('/university/profile');
+        if (res.data?.success && res.data?.profile) {
+          const prof = res.data.profile;
+          setUniversityProfile(prof);
+          const authName = prof.defaultAuthorityName || prof.default_authority_name || '';
+          const authTitle = prof.defaultAuthorityTitle || prof.default_authority_title || '';
+          setDefaultAuthorityName(authName);
+          setDefaultAuthorityTitle(authTitle);
+        }
+      } catch (err) {
+        // Fallback to /api/auth/me or continue gracefully
+        try {
+          const meRes = await api.get('/auth/me');
+          if (meRes.data?.user) {
+            setUniversityProfile(meRes.data.user);
+          }
+        } catch (_ignored) {}
+      }
+    };
+    const fetchLevels = async () => {
+      try {
+        const res = await api.get('/university/certificate-levels');
+        if (res.data?.success) {
+          const activeLevels = res.data.certificate_levels
+            .filter(l => l.isActive !== false)
+            .map(l => ({ value: l.name, label: l.name }));
+          setCertificateLevels(activeLevels.length > 0 ? activeLevels : [
+            { value: 'Bachelor', label: 'Bachelor' },
+            { value: 'Master', label: 'Master' }
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch certificate levels:', err);
+      }
+    };
+    fetchProfile();
+    fetchLevels();
+  }, []);
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-1.5">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-        <Lock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-        {tooltip && (
-          <div className="group relative">
-            <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
-            <div className="pointer-events-none absolute left-0 bottom-full mb-1.5 z-10 hidden w-56 rounded-lg bg-gray-900 p-2 text-xs text-white shadow-lg group-hover:block dark:bg-gray-700">
-              {tooltip}
+    <DashboardLayout>
+      <div className="space-y-6 pb-12">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--brand)]">
+              <Award className="h-4 w-4" />
+              <span>Academic Credential Registry</span>
             </div>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+              Issue Certificate
+            </h1>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Issue verified, tamper-proof academic credentials individually or in batch.
+            </p>
           </div>
+        </div>
+
+        {/* Tab Switching Navigation */}
+        <div className="flex items-center gap-3 border-b border-[var(--border)] pb-4">
+          <Button
+            variant={activeTab === 'single' ? 'primary' : 'secondary'}
+            onClick={() => setActiveTab('single')}
+            icon={<Award className="h-4 w-4" />}
+            className="transition-all duration-200"
+          >
+            Single Certificate
+          </Button>
+          <Button
+            variant={activeTab === 'batch' ? 'primary' : 'secondary'}
+            onClick={() => setActiveTab('batch')}
+            icon={<UploadCloud className="h-4 w-4" />}
+            className="transition-all duration-200"
+          >
+            Batch Upload
+          </Button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'single' ? (
+          <SingleCertificateTab
+            defaultAuthorityName={defaultAuthorityName}
+            defaultAuthorityTitle={defaultAuthorityTitle}
+            universityProfile={universityProfile}
+            locationState={location.state}
+            certificateLevels={certificateLevels}
+          />
+        ) : (
+          <BatchUploadTab
+            defaultAuthorityName={defaultAuthorityName}
+            defaultAuthorityTitle={defaultAuthorityTitle}
+            certificateLevels={certificateLevels}
+          />
         )}
       </div>
-      <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
-        {value || <span className="text-gray-400 italic">Not available</span>}
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }
 
-/* ─── Single Certificate Form ────────────────────────────────────────────── */
-function SingleCertificateForm() {
-  const { user } = useAuth();
-  const location = useLocation();
-  const preSelectedStudent = location.state?.preSelectedStudent;
+/* =============================================================================
+   TAB 1: SINGLE CERTIFICATE
+   ============================================================================= */
+function SingleCertificateTab({
+  defaultAuthorityName,
+  defaultAuthorityTitle,
+  universityProfile,
+  locationState,
+  certificateLevels,
+}) {
+  const navigate = useNavigate();
 
-  const [success, setSuccess] = useState('');
-  const [serverError, setServerError] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentOptions, setStudentOptions] = useState([]);
-  const [prefillLoading, setPrefillLoading] = useState(false);
+  // Search State
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [defaultOptions, setDefaultOptions] = useState([]);
 
-  // Data populated by prefill
-  const [lockedName, setLockedName] = useState('');
-  const [lockedRollNumber, setLockedRollNumber] = useState('');
-  const [certLevelOptions, setCertLevelOptions] = useState([]);
-
-  // Department & major dropdowns
-  const [departments, setDepartments] = useState([]);
-  const [majors, setMajors] = useState([]);
-  const [majorsLoading, setMajorsLoading] = useState(false);
-
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-    setError,
-    setValue,
-    watch,
-    control,
-  } = useForm({
-    resolver: yupResolver(certificateSchema),
-    defaultValues: {
-      student_id: '',
-      certificate_level_id: '',
-      department_id: '',
-      major_id: '',
-      session: '',
-      issue_date: new Date().toISOString().split('T')[0],
-    },
+  // Form State
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [formData, setFormData] = useState({
+    certificateName: '',
+    certificateLevel: '',
+    department: '',
+    major: '',
+    session: '',
+    cgpa: '',
+    degreeClass: '',
+    issueDate: todayStr,
+    convocationDate: '',
+    authorityName: '',
+    authorityTitle: '',
   });
 
-  // Fetch all active departments and profile defaults once
+  const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // Success Modal State
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [issuedSerial, setIssuedSerial] = useState('');
+  const [issuedStudentName, setIssuedStudentName] = useState('');
+
+  // Update authority defaults when profile loads
   useEffect(() => {
-    cachedGet('/university/departments')
-      .then(({ data }) => setDepartments(data.departments?.filter(d => d.is_active) || []))
-      .catch(console.error);
-      
-    api.get('/profile')
-      .then(({ data }) => {
-        if (data.success && data.profile) {
-          setValue('authority_name', data.profile.default_authority_name || '');
-          setValue('authority_title', data.profile.default_authority_title || '');
-        }
-      })
-      .catch(console.error);
-  }, [setValue]);
+    setFormData((prev) => ({
+      ...prev,
+      authorityName: prev.authorityName || defaultAuthorityName,
+      authorityTitle: prev.authorityTitle || defaultAuthorityTitle,
+    }));
+  }, [defaultAuthorityName, defaultAuthorityTitle]);
 
-  const watchedCertLevelId = watch('certificate_level_id');
-  const watchedDeptId = watch('department_id');
-  const watchedSession = watch('session');
-  const isPrefillingRef = React.useRef(false);
-  const isPrefillingCertRef = React.useRef(false);
-
-  const sessionOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const seasons = ['Fall', 'Summer', 'Spring'];
-    const opts = new Set();
-    
-    if (watchedSession) opts.add(watchedSession);
-    
-    for (let y = currentYear + 1; y >= currentYear - 5; y--) {
-      for (const season of seasons) {
-        opts.add(`${season} ${y}`);
-      }
-    }
-    
-    return Array.from(opts);
-  }, [watchedSession]);
-
-  // When certificate level changes → reset department
+  // Load initial active enrolled students so they show immediately when clicked
   useEffect(() => {
-    if (isPrefillingCertRef.current) {
-      isPrefillingCertRef.current = false; // consume the flag
-      return;
-    }
-    setValue('department_id', '');
-  }, [watchedCertLevelId, setValue]);
-
-  // When department changes → reset major & reload majors
-  useEffect(() => {
-    if (isPrefillingRef.current) {
-      isPrefillingRef.current = false; // consume the flag
-      return;
-    }
-
-    setValue('major_id', '');
-    setMajors([]);
-    if (!watchedDeptId) return;
-    setMajorsLoading(true);
-    cachedGet(`/university/majors?department_id=${watchedDeptId}`)
-      .then(({ data }) => setMajors(data.majors?.filter(m => m.is_active) || []))
-      .catch(console.error)
-      .finally(() => setMajorsLoading(false));
-  }, [watchedDeptId, setValue]);
-
-  const fetchPrefill = useCallback(async (studentId) => {
-    setPrefillLoading(true);
-    try {
-      const { data } = await api.get(`/university/certificates/prefill/${studentId}`);
-      if (data.success && data.prefill) {
-        const p = data.prefill;
-        setLockedName(p.student_name || '');
-        setLockedRollNumber(p.roll_number || '');
-        setValue('session', p.academic_session || '', { shouldValidate: true });
-        if (p.certificate_levels?.length) setCertLevelOptions(p.certificate_levels);
-
-        if (p.certificate_level_id) {
-          isPrefillingCertRef.current = true;
-          setTimeout(() => setValue('certificate_level_id', String(p.certificate_level_id)), 10);
-        }
-
-        if (p.department_id) {
-          isPrefillingRef.current = true;
-          setTimeout(() => setValue('department_id', p.department_id), 50);
-          
-          setMajorsLoading(true);
-          cachedGet(`/university/majors?department_id=${p.department_id}`)
-            .then(({ data }) => {
-              setMajors(data.majors?.filter(m => m.is_active) || []);
-              if (p.major_id) setTimeout(() => setValue('major_id', p.major_id), 100);
-            })
-            .catch(console.error)
-            .finally(() => setMajorsLoading(false));
-        } else {
-          if (p.major_id) setTimeout(() => setValue('major_id', p.major_id), 50);
-        }
-        if (p.cgpa != null) setValue('cgpa', p.cgpa);
-        if (p.degree_class) setValue('degree_class', p.degree_class);
-        if (p.default_authority_name) setValue('authority_name', p.default_authority_name);
-        if (p.default_authority_title) setValue('authority_title', p.default_authority_title);
-      }
-    } catch (error) {
-      console.error('Prefill failed:', error);
-    } finally {
-      setPrefillLoading(false);
-    }
-  }, [setValue]);
-
-  // Pre-selected student from Enrollments page
-  useEffect(() => {
-    if (preSelectedStudent && !selectedStudent) {
-      const opt = {
-        value: preSelectedStudent.id,
-        label: `${preSelectedStudent.name} — pre-selected from Enrollments`,
-        student: preSelectedStudent,
-      };
-      setStudentOptions([opt]);
-      setSelectedStudent(opt);
-      setValue('student_id', preSelectedStudent.id);
-      fetchPrefill(preSelectedStudent.id);
-    }
-  }, [preSelectedStudent, setValue, selectedStudent, fetchPrefill]);
-
-  const searchStudents = useCallback(
-    debounce(async (inputValue) => {
-      if (!inputValue || inputValue.length < 2) {
-        setStudentOptions([]);
-        return;
-      }
-      try {
-        const { data } = await api.get('/university/students/search', {
-          params: { q: inputValue, enrolled: true },
-        });
-        const options = data.students.map((s) => ({
-          value: s.id,
-          label: `${s.name} — ID: ${s.enrollments?.[0]?.roll_number || 'N/A'} — ${s.email}`,
+    let isMounted = true;
+    api.get('/university/students/search', { params: { q: '' } })
+      .then((res) => {
+        if (!isMounted) return;
+        const students = res.data?.students || [];
+        const options = students.map((s) => ({
+          value: s.id || s.studentId,
+          label: `${s.name || s.studentName} (${s.rollNumber || s.roll_number || s.enrollmentNumber || 'No ID'})`,
           student: s,
         }));
-        setStudentOptions(options);
-      } catch (error) {
-        toast.error('Failed to search students');
-      }
-    }, 450),
-    []
-  );
+        setDefaultOptions(options);
+      })
+      .catch((err) => {
+        console.error('Failed to pre-load enrolled students:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
+  // Handle pre-selected student from location.state if navigated from Enrollments
   useEffect(() => {
-    if (selectedStudent) {
-      setValue('student_id', selectedStudent.value);
-      fetchPrefill(selectedStudent.value);
-    } else {
-      setValue('student_id', '');
-      setLockedName('');
-      setLockedRollNumber('');
-      setValue('session', '');
-      setCertLevelOptions([]);
-    }
-  }, [selectedStudent, setValue, fetchPrefill]);
-
-  const onSubmit = async (data) => {
-    setSuccess('');
-    setServerError('');
-    try {
-      const payload = {
-        student_id: Number(data.student_id),
-        certificate_level_id: Number(data.certificate_level_id),
-        department_id: Number(data.department_id),
-        major_id: data.major_id ? Number(data.major_id) : null,
-        cgpa: data.cgpa ? Number(data.cgpa) : null,
-        degree_class: data.degree_class || null,
-        issue_date: toApiDate(data.issue_date),
-        convocation_date: data.convocation_date ? toApiDate(data.convocation_date) : null,
-        authority_name: data.authority_name,
-        authority_title: data.authority_title,
-        session: data.session,
+    if (locationState?.preSelectedStudent) {
+      const s = locationState.preSelectedStudent;
+      const opt = {
+        value: s.id || s.studentId,
+        label: `${s.name || s.studentName} (${s.rollNumber || s.roll_number || s.enrollmentNumber || 'No ID'})`,
+        student: s,
       };
-      await api.post('/university/certificates', payload);
-      setSuccess('Certificate issued successfully.');
-      toast.success('Certificate issued!');
-      reset();
-      setSelectedStudent(null);
-      setLockedName('');
-      setLockedRollNumber('');
-      
-      // Restore default authority after reset
-      api.get('/profile').then(({ data }) => {
-        if (data.success && data.profile) {
-          setValue('authority_name', data.profile.default_authority_name || '');
-          setValue('authority_title', data.profile.default_authority_title || '');
-        }
-      }).catch(console.error);
-    } catch (requestError) {
-      const responseData = requestError.response?.data;
-      if (requestError.response?.status === 422 && responseData?.errors) {
-        Object.entries(responseData.errors).forEach(([field, messages]) => {
-          setError(field, { type: 'server', message: messages[0] });
+      setSelectedOption(opt);
+      applyStudentDetails(s);
+    }
+  }, [locationState]);
+
+  // Fast search function responding to keyboard typing
+  const debouncedFetchStudents = useMemo(() => {
+    const loadFunc = (inputValue, callback) => {
+      const query = (inputValue || '').trim();
+      api.get('/university/students/search', {
+        params: { q: query },
+      })
+        .then((res) => {
+          const students = res.data?.students || [];
+          const options = students.map((s) => ({
+            value: s.id || s.studentId,
+            label: `${s.name || s.studentName} (${s.rollNumber || s.roll_number || s.enrollmentNumber || 'No ID'})`,
+            student: s,
+          }));
+          callback(options);
+        })
+        .catch(() => {
+          callback([]);
         });
-        setServerError('Please fix the highlighted fields and try again.');
-      } else {
-        setServerError(responseData?.message || responseData?.error || 'Unable to issue certificate');
-      }
+    };
+    return debounce(loadFunc, 150);
+  }, []);
+
+  const loadOptions = (inputValue, callback) => {
+    debouncedFetchStudents(inputValue, callback);
+  };
+
+  // Populate fields when student is chosen
+  const applyStudentDetails = (student) => {
+    if (!student) return;
+    setFormData((prev) => ({
+      ...prev,
+      department: student.department || prev.department,
+      major: student.major || prev.major,
+      session: student.session || prev.session || 'Spring 2026',
+      certificateName:
+        prev.certificateName ||
+        (student.program
+          ? student.program
+          : student.department
+          ? `Bachelor of Science in ${student.department}`
+          : 'Bachelor of Science in Computer Science and Engineering'),
+    }));
+  };
+
+  const handleStudentSelect = (option) => {
+    setSelectedOption(option);
+    setFieldErrors((prev) => ({ ...prev, student: null }));
+    if (option?.student) {
+      applyStudentDetails(option.student);
     }
   };
 
-  const certLevelSelectOptions = certLevelOptions.map(l => ({ value: l.id, label: `${l.name} (${l.short_code})` }));
-  const deptSelectOptions = departments
-    .filter(d => !watchedCertLevelId || String(d.certificate_level_id) === String(watchedCertLevelId))
-    .map(d => ({ value: d.id, label: d.name }));
-  const majorSelectOptions = majors.map(m => ({ value: m.id, label: m.name }));
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: null }));
+    }
+    if ((field === 'cgpa' || field === 'degreeClass') && value) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.cgpa;
+        delete next.degreeClass;
+        return next;
+      });
+    }
+  };
+
+  // Form Submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const errors = {};
+    if (!selectedOption?.student) {
+      errors.student = 'Please search and select an enrolled student';
+    }
+    if (!formData.certificateName?.trim()) {
+      errors.certificateName = 'Certificate name is required';
+    }
+    if (!formData.certificateLevel) {
+      errors.certificateLevel = 'Certificate level is required';
+    }
+    if (!formData.session?.trim()) {
+      errors.session = 'Academic session is required';
+    }
+    if (!formData.issueDate) {
+      errors.issueDate = 'Issue date is required';
+    }
+    if (!formData.authorityName?.trim()) {
+      errors.authorityName = 'Authority name is required';
+    }
+    if (!formData.authorityTitle?.trim()) {
+      errors.authorityTitle = 'Authority title is required';
+    }
+
+    const hasCgpa = formData.cgpa !== '' && formData.cgpa !== null && formData.cgpa !== undefined;
+    const hasDegreeClass = Boolean(formData.degreeClass?.trim());
+
+    if (!hasCgpa && !hasDegreeClass) {
+      errors.cgpa = 'Either CGPA or Degree Class is required';
+      errors.degreeClass = 'Either CGPA or Degree Class is required';
+    } else if (hasCgpa) {
+      const num = parseFloat(formData.cgpa);
+      if (isNaN(num) || num < 0 || num > 4.0) {
+        errors.cgpa = 'CGPA must be between 0.00 and 4.00';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      toast.error('Please complete all required fields correctly.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        studentId: selectedOption.student.id || selectedOption.student.studentId,
+        enrollmentId: selectedOption.student.enrollmentId || null,
+        certificateName: formData.certificateName.trim(),
+        certificateLevel: formData.certificateLevel,
+        department: formData.department?.trim() || null,
+        major: formData.major?.trim() || null,
+        session: formData.session.trim(),
+        cgpa: formData.cgpa ? parseFloat(formData.cgpa) : null,
+        degreeClass: formData.degreeClass?.trim() || null,
+        issueDate: formData.issueDate,
+        convocationDate: formData.convocationDate || null,
+        authorityName: formData.authorityName.trim(),
+        authorityTitle: formData.authorityTitle.trim(),
+      };
+
+      const res = await api.post('/university/certificates', payload);
+      const resData = res.data?.data || res.data || {};
+      const generatedSerial = resData.serial || 'BSC-26-000001M';
+
+      toast.success('Certificate issued successfully');
+      setIssuedSerial(generatedSerial);
+      setIssuedStudentName(
+        selectedOption.student.name || selectedOption.student.studentName || 'Student'
+      );
+      setSuccessModalOpen(true);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Failed to issue certificate. Please check details and try again.';
+      toast.error(msg);
+      // We keep the form filled so user does not lose data!
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Reset Form for next certificate
+  const handleResetForm = () => {
+    setSelectedOption(null);
+    setFormData({
+      certificateName: '',
+      certificateLevel: '',
+      department: '',
+      major: '',
+      session: '',
+      cgpa: '',
+      degreeClass: '',
+      issueDate: todayStr,
+      convocationDate: '',
+      authorityName: defaultAuthorityName,
+      authorityTitle: defaultAuthorityTitle,
+    });
+    setFieldErrors({});
+    setSuccessModalOpen(false);
+  };
+
+  const copySerialToClipboard = () => {
+    if (issuedSerial) {
+      navigator.clipboard.writeText(issuedSerial);
+      toast.success('Serial number copied to clipboard!');
+    }
+  };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div className="xl:col-span-2">
-        <Card className="space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Issue Single Certificate</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Select a student to auto-populate enrollment data.</p>
-          </div>
-
-          {preSelectedStudent && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-800 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-300">
-              <p className="font-medium text-sm">
-                Issuing certificate for <span className="font-bold">{preSelectedStudent.name}</span> who was just marked as graduated.
-              </p>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Left Column: Form (8 cols) */}
+      <div className="lg:col-span-8 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* PART 1 — Select Student */}
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand)]">
+                1
+              </span>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Select Student
+              </h2>
             </div>
-          )}
 
-          {success && <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-300">{success}</div>}
-          {serverError && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">{serverError}</div>}
-
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Step 1: Student Search */}
-            <div className="rounded-xl border border-gray-200 p-5 dark:border-gray-700">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Step 1 — Select Student</h3>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Search by name, email, or Student ID
-                </label>
-                <Select
-                  options={studentOptions}
-                  value={selectedStudent}
-                  onChange={setSelectedStudent}
-                  onInputChange={(v, { action }) => { if (action === 'input-change') searchStudents(v); }}
-                  placeholder="Type to search enrolled students…"
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">
+                Search Enrolled Student <span className="text-[var(--danger)]">*</span>
+              </label>
+              <div className="relative">
+                <AsyncSelect
+                  value={selectedOption}
+                  onChange={handleStudentSelect}
+                  loadOptions={loadOptions}
+                  defaultOptions={defaultOptions.length > 0 ? defaultOptions : true}
+                  openMenuOnClick={true}
+                  placeholder="Click to view enrolled students, or type to search..."
                   noOptionsMessage={({ inputValue }) =>
-                    inputValue.length < 2 ? 'Type at least 2 characters' : 'No enrolled students found'
+                    'No enrolled active students found'
                   }
+                  loadingMessage={() => 'Searching enrolled students...'}
                   isClearable
-                  className="react-select-container"
-                  classNamePrefix="react-select"
+                  formatOptionLabel={(option) => {
+                    const s = option.student;
+                    return (
+                      <div className="py-1">
+                        <div className="font-semibold text-[var(--text-primary)]">
+                          {s.name || s.studentName}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)] mt-0.5">
+                          <span>
+                            ID: <strong className="text-[var(--text-secondary)]">{s.rollNumber || s.roll_number || 'N/A'}</strong>
+                          </span>
+                          <span>•</span>
+                          <span>
+                            Enrollment: <strong className="text-[var(--text-secondary)]">{s.enrollmentNumber || s.enrollment_number || 'N/A'}</strong>
+                          </span>
+                          {s.program && (
+                            <>
+                              <span>•</span>
+                              <span>{s.program}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }}
                   styles={{
-                    control: (base) => ({
+                    control: (base, state) => ({
                       ...base,
-                      minHeight: '42px',
-                      borderColor: errors.student_id ? '#ef4444' : '#d1d5db',
-                      borderRadius: '0.75rem',
+                      backgroundColor: 'var(--bg-surface)',
+                      borderColor: fieldErrors.student
+                        ? 'var(--danger)'
+                        : state.isFocused
+                        ? 'var(--brand)'
+                        : 'var(--border)',
+                      borderRadius: '8px',
+                      minHeight: '44px',
+                      boxShadow: state.isFocused
+                        ? '0 0 0 3px rgba(99, 102, 241, 0.15)'
+                        : 'none',
+                      '&:hover': {
+                        borderColor: state.isFocused ? 'var(--brand)' : 'var(--border-strong)',
+                      },
                     }),
-                    menu: (base) => ({ ...base, zIndex: 100 }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: 'var(--bg-surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      boxShadow: 'var(--shadow-lg)',
+                      zIndex: 999,
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected
+                        ? 'var(--brand)'
+                        : state.isFocused
+                        ? 'var(--bg-elevated)'
+                        : 'transparent',
+                      color: state.isSelected ? '#fff' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      color: 'var(--text-primary)',
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: 'var(--text-primary)',
+                    }),
                   }}
                 />
-                {errors.student_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.student_id.message}</p>}
               </div>
-
-              {prefillLoading && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 animate-pulse">
-                  <LoadingSpinner size="sm" /> Loading enrollment data…
-                </div>
+              {fieldErrors.student && (
+                <p className="mt-1 text-xs text-[var(--danger)]">{fieldErrors.student}</p>
               )}
             </div>
 
-            {/* Step 2: Auto-populated (locked) fields */}
-            {selectedStudent && (
-              <div className="rounded-xl border border-gray-200 p-5 dark:border-gray-700">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Step 2 — Student Details</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <LockedField label="Full Legal Name" value={lockedName} />
-                  <LockedField label="Student ID" value={lockedRollNumber} />
+            {/* Read-only Student Summary Card */}
+            {selectedOption?.student && (
+              <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 shadow-sm animate-fadeIn">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-[var(--text-primary)]">
+                        {selectedOption.student.name || selectedOption.student.studentName}
+                      </h3>
+                      <Badge
+                        variant={
+                          selectedOption.student.status === 'active' ||
+                          selectedOption.student.status === 'enrolled'
+                            ? 'success'
+                            : selectedOption.student.status === 'graduated'
+                            ? 'info'
+                            : 'default'
+                        }
+                        size="sm"
+                      >
+                        {selectedOption.student.status
+                          ? selectedOption.student.status.toUpperCase()
+                          : 'ENROLLED'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {selectedOption.student.email}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-[var(--brand-light)] px-2.5 py-1 text-xs font-semibold text-[var(--brand)]">
+                    Student ID: {selectedOption.student.rollNumber || selectedOption.student.roll_number || 'N/A'}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[var(--border)] text-xs">
+                  <div>
+                    <span className="text-[var(--text-muted)]">Enrollment Number:</span>
+                    <p className="font-semibold text-[var(--text-primary)] mt-0.5">
+                      {selectedOption.student.enrollmentNumber || selectedOption.student.enrollment_number || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)]">Program / Department:</span>
+                    <p className="font-semibold text-[var(--text-primary)] mt-0.5">
+                      {selectedOption.student.department || selectedOption.student.program || 'N/A'}
+                      {selectedOption.student.major ? ` (${selectedOption.student.major})` : ''}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)]">Expected Graduation:</span>
+                    <p className="font-semibold text-[var(--text-primary)] mt-0.5">
+                      {selectedOption.student.expectedGraduationDate ||
+                        selectedOption.student.expected_graduation_date ||
+                        'Not specified'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)]">Enrolled Session:</span>
+                    <p className="font-semibold text-[var(--text-primary)] mt-0.5">
+                      {selectedOption.student.session || 'N/A'}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
+          </Card>
 
-            {/* Step 3: Certificate Details */}
-            <div className="rounded-xl border border-gray-200 p-5 dark:border-gray-700">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Step 3 — Certificate Details</h3>
-              <div className="space-y-4">
-                {/* Certificate Level */}
+          {/* PART 2 — Certificate Details */}
+          <Card className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand)]">
+                2
+              </span>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                Certificate Details
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              {/* Certificate Name */}
+              <Input
+                label="Certificate Name"
+                placeholder="Bachelor of Science in Computer Science and Engineering"
+                value={formData.certificateName}
+                onChange={(e) => handleInputChange('certificateName', e.target.value)}
+                error={fieldErrors.certificateName}
+                required
+              />
+
+              {/* Certificate Level & Session */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Certificate Level</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                    Certificate Level <span className="text-[var(--danger)]">*</span>
+                  </label>
                   <select
-                    {...register('certificate_level_id')}
-                    className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    value={formData.certificateLevel}
+                    onChange={(e) => handleInputChange('certificateLevel', e.target.value)}
+                    className="w-full h-[40px] px-3 rounded-[8px] border border-[var(--border)] bg-[var(--bg-surface)] text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] transition-all"
                   >
-                    <option value="">Select certificate level</option>
-                    {certLevelSelectOptions.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                    <option value="">Select Level</option>
+                    {certificateLevels.map((lvl) => (
+                      <option key={lvl.value} value={lvl.value}>
+                        {lvl.label}
+                      </option>
                     ))}
                   </select>
-                  {errors.certificate_level_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.certificate_level_id.message}</p>}
-                  {!certLevelOptions.length && selectedStudent && !prefillLoading && (
-                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">No active certificate levels. Add them in University Settings.</p>
+                  {fieldErrors.certificateLevel && (
+                    <p className="mt-1 text-xs text-[var(--danger)]">
+                      {fieldErrors.certificateLevel}
+                    </p>
                   )}
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Department */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
-                    <select
-                      {...register('department_id')}
-                      disabled={!watchedCertLevelId}
-                      className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-800/50"
-                    >
-                      <option value="">{watchedCertLevelId ? 'Select department' : 'Select a certificate level first'}</option>
-                      {deptSelectOptions.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    {errors.department_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.department_id.message}</p>}
-                  </div>
+                <Input
+                  label="Session"
+                  placeholder="e.g. Spring 2026"
+                  value={formData.session}
+                  onChange={(e) => handleInputChange('session', e.target.value)}
+                  error={fieldErrors.session}
+                  required
+                />
+              </div>
 
-                  {/* Major — loads based on department */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Major <span className="text-gray-400 font-normal">(optional)</span>
-                    </label>
-                    <select
-                      {...register('major_id')}
-                      disabled={!watchedDeptId || majorsLoading}
-                      className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-800/50"
-                    >
-                      <option value="">{watchedDeptId ? (majorsLoading ? 'Loading…' : 'Select major') : 'Select a department first'}</option>
-                      {majorSelectOptions.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+              {/* Department & Major */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Department"
+                  placeholder="e.g. Computer Science and Engineering"
+                  value={formData.department}
+                  onChange={(e) => handleInputChange('department', e.target.value)}
+                  hint="Pre-filled from enrollment if available"
+                />
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input label="CGPA" type="number" step="0.01" placeholder="e.g. 3.75" {...register('cgpa')} error={errors.cgpa?.message} />
-                  <Input label="Degree Class (Optional)" placeholder="e.g. First Class" {...register('degree_class')} error={errors.degree_class?.message} />
-                </div>
-                
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Academic Session</label>
-                  <select
-                    {...register('session')}
-                    className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="">Select Session</option>
-                    {sessionOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  {errors.session && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.session.message}</p>}
-                  <p className="mt-1.5 text-xs text-gray-500">Prefilled from enrollment, but you can select a different session here.</p>
-                </div>
+                <Input
+                  label="Major (Optional)"
+                  placeholder="e.g. Software Engineering"
+                  value={formData.major}
+                  onChange={(e) => handleInputChange('major', e.target.value)}
+                  hint="Optional specialization"
+                />
+              </div>
+
+              {/* CGPA & Degree Class */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="CGPA"
+                  type="number"
+                  step="0.01"
+                  min="0.00"
+                  max="4.00"
+                  placeholder="e.g. 3.85"
+                  value={formData.cgpa}
+                  onChange={(e) => handleInputChange('cgpa', e.target.value)}
+                  error={fieldErrors.cgpa}
+                  hint="Scale of 0.00 to 4.00 (required if Degree Class omitted)"
+                />
+
+                <Input
+                  label="Degree Class"
+                  placeholder="e.g. First Class, Distinction"
+                  value={formData.degreeClass}
+                  onChange={(e) => handleInputChange('degreeClass', e.target.value)}
+                  error={fieldErrors.degreeClass}
+                  hint="e.g. First Class (required if CGPA omitted)"
+                />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Issue Date"
+                  type="date"
+                  value={formData.issueDate}
+                  onChange={(e) => handleInputChange('issueDate', e.target.value)}
+                  error={fieldErrors.issueDate}
+                  required
+                />
+
+                <Input
+                  label="Convocation Date (Optional)"
+                  type="date"
+                  value={formData.convocationDate}
+                  onChange={(e) => handleInputChange('convocationDate', e.target.value)}
+                />
+              </div>
+
+              {/* Authority Name & Authority Title */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Authority Name"
+                  placeholder="e.g. Prof. Dr. John Smith"
+                  value={formData.authorityName}
+                  onChange={(e) => handleInputChange('authorityName', e.target.value)}
+                  error={fieldErrors.authorityName}
+                  hint="Pre-filled from university profile"
+                  required
+                />
+
+                <Input
+                  label="Authority Title"
+                  placeholder="e.g. Vice Chancellor"
+                  value={formData.authorityTitle}
+                  onChange={(e) => handleInputChange('authorityTitle', e.target.value)}
+                  error={fieldErrors.authorityTitle}
+                  hint="Pre-filled from university profile"
+                  required
+                />
               </div>
             </div>
 
-            {/* Step 4: Dates & Authority */}
-            <div className="rounded-xl border border-gray-200 p-5 dark:border-gray-700">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Step 4 — Dates &amp; Signing Authority</h3>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Input
-                      type="date"
-                      label="Issue Date"
-                      {...register('issue_date')}
-                      error={errors.issue_date?.message}
-                    />
-                    <p className="mt-1 text-xs text-gray-400">Stored as DD/MM/YYYY on certificate</p>
-                  </div>
-                  <div>
-                    <Input
-                      type="date"
-                      label="Convocation Date (Optional)"
-                      {...register('convocation_date')}
-                      error={errors.convocation_date?.message}
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input label="Authority Name" placeholder="e.g. Prof. Dr. John Smith" {...register('authority_name')} error={errors.authority_name?.message} />
-                  <Input label="Authority Title" placeholder="e.g. Vice Chancellor" {...register('authority_title')} error={errors.authority_title?.message} />
-                </div>
-              </div>
+            {/* Submit Button */}
+            <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between">
+              <p className="text-xs text-[var(--text-muted)]">
+                * All fields are required unless marked optional
+              </p>
+              <Button
+                type="submit"
+                loading={submitting}
+                disabled={!selectedOption?.student || submitting}
+                icon={<Award className="h-4 w-4" />}
+                className="px-6"
+              >
+                Issue Certificate
+              </Button>
             </div>
-
-            <Button type="submit" loading={isSubmitting} disabled={!selectedStudent} className="w-full sm:w-auto">
-              Issue Certificate
-            </Button>
-          </form>
-        </Card>
+          </Card>
+        </form>
       </div>
 
-      <div className="xl:col-span-1">
-        <div className="sticky top-6 space-y-6">
-          <Card>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">Live Preview</h3>
-            <div className="aspect-[1.414/1] w-full bg-white p-[6px] shadow-sm relative overflow-hidden text-center" style={{ border: '6px solid #0d2b5e' }}>
-              <div className="w-full h-full p-4 relative flex flex-col items-center" style={{ border: '2px solid #bda853' }}>
-                <div className="absolute top-2 left-3 text-left">
-                  {watch('convocation_date') && (
-                    <div className="text-[8px] text-gray-700 font-serif">
-                      <span className="font-bold text-[#0d2b5e]">Convocation Date:</span> {toDisplayDate(watch('convocation_date'))}
-                    </div>
+      {/* Right Column: Live Certificate Preview (4 cols) */}
+      <div className="lg:col-span-4">
+        <div className="sticky top-6 space-y-4">
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Live Certificate Preview
+              </span>
+              <Badge variant="primary" size="sm">
+                Real-time
+              </Badge>
+            </div>
+
+            {/* Academic Certificate Mock Frame */}
+            <div
+              className="aspect-[1.414/1] w-full rounded-lg bg-[#faf8f5] p-3 shadow-md border-4 border-[#1e293b] text-center flex flex-col justify-between relative overflow-hidden"
+              style={{
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              }}
+            >
+              {/* Inner Gold Border */}
+              <div className="w-full h-full border border-[#d97706]/70 rounded p-2.5 flex flex-col justify-between relative">
+                {/* Header Section */}
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest font-serif font-bold text-[#0f172a]">
+                    {universityProfile?.name || 'Your University'}
+                  </p>
+                  <p className="text-[7px] italic font-serif text-[#b45309] mt-0.5">
+                    Certificate of Academic Achievement
+                  </p>
+                </div>
+
+                {/* Body / Student Section */}
+                <div className="my-auto py-1">
+                  <p className="text-[6px] text-gray-500 font-serif">This is to certify that</p>
+                  <h4 className="text-[11px] font-bold text-[#0f172a] tracking-tight font-serif mt-0.5">
+                    {selectedOption?.student?.name ||
+                      selectedOption?.student?.studentName ||
+                      'Student Full Name'}
+                  </h4>
+                  <p className="text-[6.5px] text-gray-600 font-serif leading-tight mt-1 max-w-[90%] mx-auto">
+                    has completed the prescribed course of study for the degree of
+                  </p>
+                  <p className="text-[8px] font-bold text-[#1e3a8a] mt-0.5">
+                    {formData.certificateName || 'Degree / Certificate Title'}
+                  </p>
+                  {formData.major && (
+                    <p className="text-[6.5px] text-gray-600 italic">Major in {formData.major}</p>
                   )}
                 </div>
-                
-                <div className="absolute top-2 right-3 text-right">
-                  <div className="text-[8px] text-gray-700 font-serif">
-                    <span className="font-bold text-[#0d2b5e]">Issue Date:</span> {watch('issue_date') ? toDisplayDate(watch('issue_date')) : 'DD/MM/YYYY'}
+
+                {/* Details Footer */}
+                <div className="space-y-1 text-[6px] text-gray-600 border-t border-gray-200 pt-1">
+                  <div className="flex justify-between items-center px-1 font-mono">
+                    <span>
+                      {formData.cgpa ? (
+                        <>CGPA: <strong>{formData.cgpa}</strong></>
+                      ) : formData.degreeClass ? (
+                        <>Class: <strong>{formData.degreeClass}</strong></>
+                      ) : (
+                        <>CGPA: <strong>N/A</strong></>
+                      )}
+                    </span>
+                    <span>
+                      Session: <strong>{formData.session || 'N/A'}</strong>
+                    </span>
                   </div>
-                </div>
-
-                <div className="mt-5 text-sm font-bold uppercase tracking-wider text-[#0d2b5e] leading-tight">
-                  {user?.name || 'Your Institution'}
-                </div>
-
-                <div className="mt-1 text-base font-serif italic leading-tight" style={{ color: '#bda853' }}>
-                  Certificate of Achievement
-                </div>
-
-                <div className="mt-2.5 text-[8px] leading-normal font-serif text-gray-700 w-[95%] mx-auto">
-                  This is to certify that <span className="font-bold text-black text-[9px]">{lockedName || 'Student Name'}</span> has successfully completed the requirements for the degree of <span className="font-bold">
-                    {watch('certificate_level_id') 
-                      ? certLevelSelectOptions.find(o => String(o.value) === String(watch('certificate_level_id')))?.label?.split(' (')[0] || 'Program'
-                      : 'Certificate Level'}
-                  </span>
-                  {watch('major_id') && (
-                    <span> in <span className="font-bold">{majorSelectOptions.find(o => String(o.value) === String(watch('major_id')))?.label}</span></span>
-                  )}.
-                </div>
-
-                <div className="mt-2 text-[7px] leading-tight font-serif text-gray-700 space-y-0.5">
-                  <div>
-                    Student ID: <span className="font-bold">{lockedRollNumber || 'XXXXXX'}</span>
-                  </div>
-                  <div>
-                    Academic Session: <span className="font-bold">{watch('session') || 'YYYY-YYYY'}</span>
-                  </div>
-                  <div>
-                    <span>CGPA: <span className="font-bold">{watch('cgpa') ? Number(watch('cgpa')).toFixed(2) : 'X.XX'}</span>/4.00</span>
-                    <span> &nbsp;|&nbsp; </span>
-                    <span>Class: <span className="font-bold">{watch('degree_class') || 'Division/Class'}</span></span>
-                  </div>
-                </div>
-
-                <div className="mt-auto w-full flex justify-between items-end px-2 pb-1">
-                  <div className="text-left flex flex-col items-center">
-                    <div className="w-8 h-8 border border-gray-300 bg-gray-50 flex items-center justify-center mb-0.5">
-                      <span className="text-[5px] text-gray-400">QR CODE</span>
+                  <div className="flex justify-between items-end px-1 pt-1">
+                    <div className="text-left">
+                      <div className="h-5 w-5 bg-gray-200 border border-gray-300 rounded flex items-center justify-center text-[5px] text-gray-500 font-mono">
+                        QR
+                      </div>
+                      <span className="text-[5px] text-gray-400 font-mono block mt-0.5">
+                        Serial: BSC-XX-XXXXXX
+                      </span>
                     </div>
-                    <div className="text-[5px] text-gray-500 font-mono">Serial No: XXXXXX</div>
-                  </div>
-                  <div className="text-center w-20">
-                    <div className="border-t border-gray-800 w-full mb-0.5"></div>
-                    <div className="text-[7px] font-bold text-[#0d2b5e] leading-none font-sans mb-0.5">
-                      {watch('authority_name') || 'Issuing Authority'}
-                    </div>
-                    <div className="text-[5px] text-gray-600 leading-none font-sans">
-                      {watch('authority_title') || 'Authorized Signatory'}
+                    <div className="text-right">
+                      <div className="w-16 border-t border-gray-400 mb-0.5" />
+                      <p className="font-bold text-[6px] text-[#0f172a]">
+                        {formData.authorityName || 'Authority Name'}
+                      </p>
+                      <p className="text-[5px] text-gray-500">
+                        {formData.authorityTitle || 'Authority Title'}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div className="mt-4 flex items-start gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800/30">
-              <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                This is a structural preview. The final PDF will use your university's official certificate template.
-              </p>
+
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-[var(--bg-elevated)] p-2.5 text-xs text-[var(--text-secondary)] border border-[var(--border)]">
+              <Info className="h-4 w-4 text-[var(--brand)] shrink-0 mt-0.5" />
+              <span>
+                Generated certificates are cryptographically recorded and verifiable via QR code.
+              </span>
             </div>
           </Card>
         </div>
       </div>
+
+      {/* Success Modal Showing Generated Serial Number Prominently */}
+      <Modal
+        isOpen={successModalOpen}
+        onClose={() => setSuccessModalOpen(false)}
+        size="md"
+      >
+        <div className="text-center py-4 space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-10 w-10" />
+          </div>
+
+          <div>
+            <h3 className="text-xl font-bold text-[var(--text-primary)]">
+              Certificate issued!
+            </h3>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              Issued for <strong className="text-[var(--text-primary)]">{issuedStudentName}</strong>
+            </p>
+          </div>
+
+          {/* Prominent Serial Box */}
+          <div className="my-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
+            <p className="text-xs uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
+              Certificate Serial Number
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="font-mono text-2xl font-extrabold tracking-wider text-[var(--text-primary)]">
+                {issuedSerial}
+              </span>
+              <button
+                type="button"
+                onClick={copySerialToClipboard}
+                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--brand)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
+                title="Copy Serial Number"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/university/certificates')}
+              icon={<ExternalLink className="h-4 w-4" />}
+              className="w-full sm:w-auto"
+            >
+              View Certificate
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleResetForm}
+              icon={<RefreshCw className="h-4 w-4" />}
+              className="w-full sm:w-auto"
+            >
+              Issue Another
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
-/* ─── Batch Upload Form ──────────────────────────────────────────────────── */
-function BatchUploadForm() {
-  const [file, setFile] = useState(null);
+/* =============================================================================
+   TAB 2: BATCH UPLOAD
+   ============================================================================= */
+function BatchUploadTab({
+  defaultAuthorityName,
+  defaultAuthorityTitle,
+  certificateLevels,
+}) {
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Step 2: Common Details State
+  const [commonDetails, setCommonDetails] = useState({
+    certificateName: '',
+    certificateLevel: '',
+    department: '',
+    major: '',
+    session: '',
+    issueDate: todayStr,
+    convocationDate: '',
+    authorityName: '',
+    authorityTitle: '',
+  });
+
+  // Step 3: File State
+  const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!file) {
-      toast.error('Please select a CSV file');
-      return;
-    }
+  // Pre-fill authority defaults
+  useEffect(() => {
+    setCommonDetails((prev) => ({
+      ...prev,
+      authorityName: prev.authorityName || defaultAuthorityName,
+      authorityTitle: prev.authorityTitle || defaultAuthorityTitle,
+    }));
+  }, [defaultAuthorityName, defaultAuthorityTitle]);
 
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('csv_file', file);
-
-    try {
-      const response = await api.post('/university/certificates/batch', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setResults(response.data.results);
-      toast.success(response.data.message);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Batch upload failed');
-    } finally {
-      setUploading(false);
-    }
+  const handleCommonChange = (field, value) => {
+    setCommonDetails((prev) => ({ ...prev, [field]: value }));
   };
 
-  const downloadTemplate = async () => {
+  // Step 1: Download CSV Template
+  const handleDownloadTemplate = async () => {
     try {
-      const response = await api.get('/university/certificates/batch-template', {
+      const res = await api.get('/university/certificates/batch-template', {
         responseType: 'blob',
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([res.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', 'certificate_batch_template.csv');
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (error) {
-      toast.error('Failed to download template');
+      toast.success('Template downloaded successfully');
+    } catch (err) {
+      toast.error('Failed to download CSV template');
     }
   };
 
+  // Step 3: Handle CSV File Selection
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.csv')) {
+        toast.error('Please upload a valid .csv file only');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  // Step 3: Upload and Issue
+  const handleUploadAndIssue = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      toast.error('Please select a CSV file first');
+      return;
+    }
+    if (!commonDetails.certificateName?.trim()) {
+      toast.error('Certificate Name is required in common details');
+      return;
+    }
+    if (!commonDetails.session?.trim()) {
+      toast.error('Session is required in common details');
+      return;
+    }
+    if (!commonDetails.issueDate) {
+      toast.error('Issue Date is required in common details');
+      return;
+    }
+    if (!commonDetails.authorityName?.trim()) {
+      toast.error('Authority Name is required');
+      return;
+    }
+    if (!commonDetails.authorityTitle?.trim()) {
+      toast.error('Authority Title is required');
+      return;
+    }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('csvFile', selectedFile);
+    formData.append('certificateName', commonDetails.certificateName.trim());
+    formData.append('certificateLevel', commonDetails.certificateLevel);
+    formData.append('session', commonDetails.session.trim());
+    formData.append('issueDate', commonDetails.issueDate);
+    if (commonDetails.convocationDate) {
+      formData.append('convocationDate', commonDetails.convocationDate);
+    }
+    formData.append('authorityName', commonDetails.authorityName.trim());
+    formData.append('authorityTitle', commonDetails.authorityTitle.trim());
+
+    try {
+      const res = await api.post('/university/certificates/batch', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const batchResult = res.data?.data || res.data?.results || res.data || {};
+      setResults(batchResult);
+      toast.success(res.data?.message || 'Batch certificates processed!');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Batch processing failed';
+      toast.error(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Download results as CSV
+  const handleDownloadResults = () => {
+    if (!results) return;
+
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += 'Student Email,Status,Serial Number,Reason / Details\n';
+
+    // Successful
+    (results.issuedSerials || []).forEach((item) => {
+      csvContent += `"${item.studentEmail || ''}","SUCCESS","${item.serial || ''}","Issued to ${item.studentName || ''}"\n`;
+    });
+
+    // Failed
+    (results.errors || []).forEach((err) => {
+      csvContent += `"${err.studentEmail || ''}","FAILED","N/A","Row ${err.rowNumber || ''}: ${err.reason || ''}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `batch_results_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handleResetBatch = () => {
+    setSelectedFile(null);
+    setResults(null);
+  };
+
+  const totalProcessed = results?.totalProcessed ?? (results?.processed ?? 0);
+  const totalSuccessful = results?.successful ?? 0;
+  const totalFailed = results?.failed ?? 0;
+
   return (
     <div className="space-y-6">
-      {/* Step 1: Template */}
-      <Card>
-        <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Step 1: Download Template</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          The CSV must contain the following columns:
+      {/* Step 1 Card: Download Template */}
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand)]">
+            1
+          </span>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            Step 1: Download CSV Template
+          </h2>
+        </div>
+
+        <p className="text-sm text-[var(--text-secondary)]">
+          Fill this template with student emails and their certificate details. One student per row.
         </p>
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
-          <table className="min-w-full text-xs">
-            <thead className="bg-gray-50 dark:bg-gray-800">
+
+        {/* Requirements notice */}
+        <div className="rounded-xl border border-[var(--brand)]/20 bg-[var(--brand)]/5 p-3.5 space-y-1.5 text-xs text-[var(--text-secondary)]">
+          <p className="font-semibold text-[var(--brand)] flex items-center gap-1.5">
+            <Info className="h-4 w-4 shrink-0" />
+            Batch Upload Validation Rules:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li><strong>Student Status:</strong> Students must have an <strong>approved account</strong> and an <strong>active enrollment</strong> at your institution. Withdrawn, suspended, or unapproved students will be rejected.</li>
+            <li><strong>CGPA &amp; Degree Class:</strong> Either <code>cgpa</code> or <code>degree_class</code> can be empty, but <strong>both cannot be empty</strong> (at least one must be provided).</li>
+            <li><strong>Department &amp; Major:</strong> If left empty, will automatically fall back to the student's enrolled program and major.</li>
+          </ul>
+        </div>
+
+        {/* Expected Columns Table */}
+        <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[var(--bg-elevated)] border-b border-[var(--border)] text-[var(--text-secondary)]">
               <tr>
-                {['student_email', 'certificate_level_short_code', 'department_name', 'major_name', 'cgpa', 'degree_class', 'issue_date', 'convocation_date', 'authority_name', 'authority_title'].map(col => (
-                  <th key={col} className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">{col}</th>
-                ))}
+                <th className="px-3 py-2 font-medium">student_email</th>
+                <th className="px-3 py-2 font-medium">department</th>
+                <th className="px-3 py-2 font-medium">major</th>
+                <th className="px-3 py-2 font-medium">cgpa</th>
+                <th className="px-3 py-2 font-medium">degree_class</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr className="text-gray-500 dark:text-gray-400">
-                <td className="px-3 py-2 whitespace-nowrap">student@example.com</td>
-                <td className="px-3 py-2 whitespace-nowrap">BSc</td>
-                <td className="px-3 py-2 whitespace-nowrap">Computer Science</td>
-                <td className="px-3 py-2 whitespace-nowrap">Software Engineering</td>
-                <td className="px-3 py-2">3.75</td>
-                <td className="px-3 py-2 whitespace-nowrap">First Class</td>
-                <td className="px-3 py-2 whitespace-nowrap">15/05/2024</td>
-                <td className="px-3 py-2 whitespace-nowrap">20/06/2024</td>
-                <td className="px-3 py-2 whitespace-nowrap">Prof. Dr. Smith</td>
-                <td className="px-3 py-2 whitespace-nowrap">Vice Chancellor</td>
+            <tbody className="divide-y divide-[var(--border)] text-[var(--text-primary)]">
+              <tr>
+                <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">student1@example.com</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">Computer Science and Engineering</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">Software Engineering</td>
+                <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">3.75</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">First Class</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">student2@example.com</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">Computer Science and Engineering</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">Data Science</td>
+                <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">3.85</td>
+                <td className="px-3 py-2 text-[var(--text-muted)] italic font-mono">&lt;empty&gt;</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">student3@example.com</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">Electrical and Electronic Engineering</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">Power Systems</td>
+                <td className="px-3 py-2 text-[var(--text-muted)] italic font-mono">&lt;empty&gt;</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">First Class</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/40 dark:bg-amber-900/10 mb-4">
-          <Info className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-          <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-            <p><strong>Certificate Level:</strong> Use the exact short code (e.g., "BSc") found in the Certificate Levels section of University Settings.</p>
-            <p><strong>Departments & Majors:</strong> Must exactly match the names you've set up in University Settings.</p>
-            <p><strong>Dates:</strong> Use DD/MM/YYYY format for Issue and Convocation dates.</p>
-          </div>
+
+        <div>
+          <Button
+            variant="secondary"
+            onClick={handleDownloadTemplate}
+            icon={<Download className="h-4 w-4" />}
+          >
+            Download Template
+          </Button>
         </div>
-        <Button variant="secondary" onClick={downloadTemplate}>
-          <Download className="w-4 h-4 mr-2" />
-          Download CSV Template
-        </Button>
       </Card>
 
-      {/* Step 2: Upload */}
-      <Card>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Step 2: Upload Completed CSV</h3>
-          <div className="flex flex-col gap-4">
+      {/* Step 2 Card: Fill Common Details */}
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand)]">
+            2
+          </span>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            Step 2: Fill Common Details
+          </h2>
+        </div>
+
+        <p className="text-sm text-[var(--text-secondary)]">
+          These details apply to ALL students in the CSV batch:
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Certificate Name"
+            placeholder="Bachelor of Science in Computer Science and Engineering"
+            value={commonDetails.certificateName}
+            onChange={(e) => handleCommonChange('certificateName', e.target.value)}
+            required
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              Certificate Level <span className="text-[var(--danger)]">*</span>
+            </label>
+            <select
+              value={commonDetails.certificateLevel}
+              onChange={(e) => handleCommonChange('certificateLevel', e.target.value)}
+              className="w-full h-[40px] px-3 rounded-[8px] border border-[var(--border)] bg-[var(--bg-surface)] text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] transition-all"
+            >
+              <option value="">Select Level</option>
+              {certificateLevels.map((lvl) => (
+                <option key={lvl.value} value={lvl.value}>
+                  {lvl.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Input
+            label="Session"
+            placeholder="e.g. Spring 2026"
+            value={commonDetails.session}
+            onChange={(e) => handleCommonChange('session', e.target.value)}
+            required
+          />
+
+          <Input
+            label="Issue Date"
+            type="date"
+            value={commonDetails.issueDate}
+            onChange={(e) => handleCommonChange('issueDate', e.target.value)}
+            required
+          />
+
+          <Input
+            label="Convocation Date (Optional)"
+            type="date"
+            value={commonDetails.convocationDate}
+            onChange={(e) => handleCommonChange('convocationDate', e.target.value)}
+          />
+
+          <Input
+            label="Authority Name"
+            placeholder="e.g. Prof. Dr. John Smith"
+            value={commonDetails.authorityName}
+            onChange={(e) => handleCommonChange('authorityName', e.target.value)}
+            hint="Pre-filled from university profile"
+            required
+          />
+
+          <Input
+            label="Authority Title"
+            placeholder="e.g. Vice Chancellor"
+            value={commonDetails.authorityTitle}
+            onChange={(e) => handleCommonChange('authorityTitle', e.target.value)}
+            hint="Pre-filled from university profile"
+            required
+          />
+        </div>
+      </Card>
+
+      {/* Step 3 Card: Upload CSV */}
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand)]">
+            3
+          </span>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            Step 3: Upload CSV
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--border)] p-6 bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer relative">
             <input
               type="file"
               accept=".csv"
-              onChange={(e) => setFile(e.target.files[0])}
-              required
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-300"
+              onChange={handleFileChange}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            <Button type="submit" disabled={uploading || !file} className="w-max">
-              {uploading ? 'Processing…' : 'Upload &amp; Issue Certificates'}
+            <UploadCloud className="h-10 w-10 text-[var(--text-muted)] mb-2" />
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              {selectedFile ? selectedFile.name : 'Click or drag CSV file to upload'}
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Accepts .csv only</p>
+            {selectedFile && (
+              <Badge variant="primary" size="sm" className="mt-3">
+                Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-xs text-[var(--text-muted)]">
+              Ensure student emails in CSV match existing enrolled students.
+            </p>
+            <Button
+              variant="primary"
+              onClick={handleUploadAndIssue}
+              disabled={
+                !selectedFile ||
+                uploading ||
+                !commonDetails.certificateName ||
+                !commonDetails.session ||
+                !commonDetails.issueDate
+              }
+              loading={uploading}
+              icon={<UploadCloud className="h-4 w-4" />}
+            >
+              {uploading ? 'Processing certificates...' : 'Upload and Issue'}
             </Button>
           </div>
-        </form>
+        </div>
       </Card>
 
-      {/* Results */}
+      {/* Results Display */}
       {results && (
-        <Card>
-          <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">Upload Results</h3>
-          <div className="space-y-2 mb-4">
-            <p className="text-green-600 dark:text-green-400 font-medium">✅ Processed: {results.processed}</p>
-            <p className="text-red-600 dark:text-red-400 font-medium">❌ Failed: {results.failed}</p>
+        <Card className="space-y-5 animate-fadeIn">
+          <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+            <h3 className="text-base font-bold text-[var(--text-primary)]">
+              Batch Issuance Results
+            </h3>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleDownloadResults}
+                icon={<Download className="h-3.5 w-3.5" />}
+              >
+                Download Results
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetBatch}
+                icon={<RefreshCw className="h-3.5 w-3.5" />}
+              >
+                Issue More
+              </Button>
+            </div>
           </div>
 
-          {results.errors?.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-medium mb-2 text-gray-900 dark:text-white">Errors:</h4>
-              <div className="max-h-64 overflow-y-auto rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-900/10">
-                {results.errors.map((err, idx) => (
-                  <div key={idx} className="text-sm text-red-600 dark:text-red-400 mb-2 last:mb-0">
-                    <span className="font-semibold">Row {err.row}</span> ({err.student_email}): {err.error}
+          {/* Summary Row */}
+          <div className="flex flex-wrap items-center gap-4 text-sm font-semibold p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)]">
+            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" />
+              {totalSuccessful} successful
+            </span>
+            <span className="text-[var(--text-muted)]">|</span>
+            <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+              <XCircle className="h-4 w-4" />
+              {totalFailed} failed
+            </span>
+          </div>
+
+          {/* If All Successful */}
+          {totalFailed === 0 && totalSuccessful > 0 && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold mb-3">
+                <CheckCircle2 className="h-5 w-5" />
+                All certificates issued successfully!
+              </div>
+              <div className="divide-y divide-emerald-500/20 max-h-60 overflow-y-auto">
+                {(results.issuedSerials || []).map((s, idx) => (
+                  <div key={idx} className="py-2 flex items-center justify-between text-xs">
+                    <span className="font-mono font-bold text-emerald-800 dark:text-emerald-300">
+                      {s.serial}
+                    </span>
+                    <span className="text-emerald-700 dark:text-emerald-400">
+                      {s.studentName} ({s.studentEmail})
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {results.certificates?.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-medium mb-2 text-gray-900 dark:text-white">Issued Certificates:</h4>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {results.certificates.map((cert, idx) => (
-                  <div key={idx} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                    <span className="font-mono font-medium text-gray-800 dark:text-gray-200">{cert.serial}</span>
-                    <span className="text-gray-500 dark:text-gray-400">{cert.student_name} · {cert.student_email}</span>
-                  </div>
-                ))}
+          {/* If Some Failed */}
+          {totalFailed > 0 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                  <AlertCircle className="h-4 w-4" />
+                  Failed Rows:
+                </h4>
+                <div className="overflow-x-auto rounded-lg border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20">
+                  <table className="w-full text-left text-xs">
+                    <thead className="border-b border-rose-200 dark:border-rose-900/40 text-[var(--text-secondary)] bg-rose-100/40 dark:bg-rose-900/20">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Row number</th>
+                        <th className="px-3 py-2 font-medium">Student Email</th>
+                        <th className="px-3 py-2 font-medium">Reason for failure</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-200 dark:divide-rose-900/40 text-[var(--text-primary)]">
+                      {(results.errors || []).map((err, idx) => (
+                        <tr key={idx} className="hover:bg-rose-100/20">
+                          <td className="px-3 py-2 font-mono font-bold">
+                            Row {err.rowNumber || err.row || idx + 1}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">
+                            {err.studentEmail || err.student_email || 'N/A'}
+                          </td>
+                          <td className="px-3 py-2 text-rose-600 dark:text-rose-400">
+                            {err.reason || err.error || 'Validation error'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
+              {/* Issued serials shown separately below */}
+              {totalSuccessful > 0 && (
+                <div className="space-y-2 pt-2">
+                  <h4 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Issued Serials ({totalSuccessful}):
+                  </h4>
+                  <div className="overflow-x-auto rounded-lg border border-[var(--border)] max-h-56 divide-y divide-[var(--border)]">
+                    {(results.issuedSerials || []).map((s, idx) => (
+                      <div
+                        key={idx}
+                        className="px-3 py-2 flex items-center justify-between text-xs bg-[var(--bg-elevated)]"
+                      >
+                        <span className="font-mono font-bold text-[var(--brand)]">
+                          {s.serial}
+                        </span>
+                        <span className="text-[var(--text-secondary)]">
+                          {s.studentName} ({s.studentEmail})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
       )}
     </div>
-  );
-}
-
-/* ─── Page Shell ─────────────────────────────────────────────────────────── */
-export default function IssueCertificate() {
-  const [activeTab, setActiveTab] = useState('single');
-
-  return (
-    <DashboardLayout>
-      <div className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.15em] text-primary-600">Issue Certificate</p>
-        <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Generate Certificates</h1>
-      </div>
-
-      <div className="flex gap-2 mb-6">
-        <Button
-          variant={activeTab === 'single' ? 'primary' : 'secondary'}
-          onClick={() => setActiveTab('single')}
-        >
-          Single Certificate
-        </Button>
-        <Button
-          variant={activeTab === 'batch' ? 'primary' : 'secondary'}
-          onClick={() => setActiveTab('batch')}
-        >
-          Batch Upload
-        </Button>
-      </div>
-
-      {activeTab === 'single' && <SingleCertificateForm />}
-      {activeTab === 'batch' && <BatchUploadForm />}
-    </DashboardLayout>
   );
 }

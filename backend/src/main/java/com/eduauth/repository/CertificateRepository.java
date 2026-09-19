@@ -17,13 +17,22 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
     // ── Existing counts used by dashboards ───────────────────────────────────
     long countByStudentId(Long studentId);
+    long countByStudentIdAndRevokedAtIsNull(Long studentId);
     long countByStudentIdAndIsPubliclyShareableTrue(Long studentId);
     long countByStudentIdAndIsPubliclyShareableFalse(Long studentId);
     long countByInstitutionId(Long institutionId);
     long countByInstitutionIdAndIssueDateBetween(Long institutionId, LocalDate start, LocalDate end);
 
     // ── Lookup by serial (public verify + student PDF) ────────────────────────
-    Optional<Certificate> findBySerial(String serial);
+    @Query("""
+        SELECT c FROM Certificate c
+        LEFT JOIN FETCH c.student s
+        LEFT JOIN FETCH s.user
+        LEFT JOIN FETCH c.institution
+        LEFT JOIN FETCH c.enrollment
+        WHERE c.serial = :serial
+        """)
+    Optional<Certificate> findBySerial(@Param("serial") String serial);
     boolean existsBySerial(String serial);
 
     @Query("""
@@ -37,6 +46,8 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     Optional<Certificate> findByIdWithDetails(@Param("id") Long id);
 
     // ── Student view ──────────────────────────────────────────────────────────
+    Optional<Certificate> findFirstByEnrollmentIdOrderByIssueDateDesc(Long enrollmentId);
+
     List<Certificate> findByStudentIdOrderByIssueDateDesc(Long studentId);
 
     @Query("""
@@ -59,7 +70,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
           LEFT JOIN FETCH c.student s
           LEFT JOIN FETCH s.user u
         WHERE c.institutionId = :institutionId
-          AND (:level IS NULL OR :level = 'all' OR c.certificateLevel = :level)
+          AND (:level IS NULL OR :level = 'all' OR LOWER(c.certificateLevel) LIKE LOWER(CONCAT('%', :level, '%')))
           AND (:monthStart IS NULL OR c.issueDate >= :monthStart)
           AND (:monthEnd   IS NULL OR c.issueDate <= :monthEnd)
           AND (
@@ -105,5 +116,12 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
             Pageable pageable);
 
     // ── Verifier view — all certs for a given student ─────────────────────────
-    List<Certificate> findByStudentIdAndRevokedAtIsNullOrderByIssueDateDesc(Long studentId);
+    @Query("""
+        SELECT c FROM Certificate c
+        LEFT JOIN FETCH c.institution
+        LEFT JOIN FETCH c.enrollment
+        WHERE c.studentId = :studentId AND c.revokedAt IS NULL
+        ORDER BY c.issueDate DESC
+        """)
+    List<Certificate> findByStudentIdAndRevokedAtIsNullOrderByIssueDateDesc(@Param("studentId") Long studentId);
 }

@@ -83,32 +83,44 @@ export default function UniversitySettings() {
 
 // --- Authority Settings Tab ---
 function AuthoritySettings() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [currentSaved, setCurrentSaved] = useState({ name: '', title: '' });
   const { register, handleSubmit, setValue } = useForm();
 
+  const fetchAuthority = async () => {
+    setFetching(true);
+    try {
+      const { data } = await api.get('/university/profile');
+      const authName = data.defaultAuthorityName || data.default_authority_name || data.profile?.defaultAuthorityName || data.profile?.default_authority_name || '';
+      const authTitle = data.defaultAuthorityTitle || data.default_authority_title || data.profile?.defaultAuthorityTitle || data.profile?.default_authority_title || '';
+      setValue('defaultAuthorityName', authName);
+      setValue('defaultAuthorityTitle', authTitle);
+      setCurrentSaved({ name: authName, title: authTitle });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load authority defaults');
+    } finally {
+      setFetching(false);
+    }
+  };
+
   useEffect(() => {
-    // Assuming user context has institution details or we fetch from an endpoint. 
-    // We can fetch profile to get institution details if not fully in user obj.
-    const fetchInstitution = async () => {
-      try {
-        const { data } = await api.get('/auth/me');
-        if (data.user?.institution) {
-          setValue('default_authority_name', data.user.institution.default_authority_name || '');
-          setValue('default_authority_title', data.user.institution.default_authority_title || '');
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchInstitution();
+    fetchAuthority();
   }, [setValue]);
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await api.put('/university/settings/authority', data);
-      toast.success('Authority defaults updated');
+      await api.put('/university/profile', {
+        defaultAuthorityName: data.defaultAuthorityName,
+        defaultAuthorityTitle: data.defaultAuthorityTitle,
+      });
+      setCurrentSaved({
+        name: data.defaultAuthorityName,
+        title: data.defaultAuthorityTitle,
+      });
+      toast.success('Certificate authority defaults saved successfully');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update settings');
     } finally {
@@ -119,24 +131,50 @@ function AuthoritySettings() {
   return (
     <Card>
       <div className="border-b border-gray-200 px-6 py-5 dark:border-gray-800">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Default Signing Authority</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Certificate Authority Defaults</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          These values will automatically pre-populate the certificate issuance form.
+          These will be pre-filled when you issue certificates. You can always change them per certificate.
         </p>
       </div>
+
+      {/* Show current saved values */}
+      <div className="px-6 pt-5">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+            Current Saved Values
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-xs text-[var(--text-muted)]">Default Authority Name:</span>
+              <p className="font-semibold text-[var(--text-primary)] mt-0.5">
+                {currentSaved.name || <span className="italic text-gray-400 font-normal">Not configured</span>}
+              </p>
+            </div>
+            <div>
+              <span className="text-xs text-[var(--text-muted)]">Default Authority Title:</span>
+              <p className="font-semibold text-[var(--text-primary)] mt-0.5">
+                {currentSaved.title || <span className="italic text-gray-400 font-normal">Not configured</span>}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="px-6 py-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-xl">
           <Input 
-            label="Authority Name" 
-            placeholder="e.g. Prof. Dr. John Smith" 
-            {...register('default_authority_name')} 
+            label="Default Authority Name" 
+            placeholder="Dr. John Smith" 
+            {...register('defaultAuthorityName')} 
           />
           <Input 
-            label="Authority Title" 
-            placeholder="e.g. Vice Chancellor" 
-            {...register('default_authority_title')} 
+            label="Default Authority Title" 
+            placeholder="Vice Chancellor" 
+            {...register('defaultAuthorityTitle')} 
           />
-          <Button type="submit" loading={loading}>Save Changes</Button>
+          <Button type="submit" loading={loading} disabled={fetching}>
+            Save Authority Defaults
+          </Button>
         </form>
       </div>
     </Card>
@@ -169,7 +207,7 @@ function CertificateLevels() {
     setEditingLevel(level);
     if (level) {
       setValue('name', level.name);
-      setValue('short_code', level.short_code);
+      setValue('short_code', level.shortCode);
     } else {
       reset({ name: '', short_code: '' });
     }
@@ -236,22 +274,22 @@ function CertificateLevels() {
         </div>
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {levels.map((level) => (
-            <div key={level.id} className={`flex items-center justify-between px-6 py-4 transition-colors ${!level.is_active ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''}`}>
+            <div key={level.id} className={`flex items-center justify-between px-6 py-4 transition-colors ${!level.isActive ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''}`}>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className={`font-medium ${!level.is_active ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>{level.name}</h4>
-                  <Badge variant={level.is_active ? 'success' : 'neutral'}>
-                    {level.is_active ? 'Active' : 'Inactive'}
+                  <h4 className={`font-medium ${!level.isActive ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>{level.name}</h4>
+                  <Badge variant={level.isActive ? 'success' : 'neutral'}>
+                    {level.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  Code: {level.short_code}
+                  Code: {level.shortCode}
                   {level.student_count !== undefined && <span className="ml-3 border-l border-gray-300 dark:border-gray-700 pl-3">{level.student_count} active students</span>}
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openModal(level)}>Edit</Button>
-                {level.is_active ? (
+                {level.isActive ? (
                   <div className="group relative">
                     <Button variant="outline" size="sm" onClick={() => deactivate(level.id)} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Deactivate</Button>
                     <div className="absolute right-0 bottom-full mb-2 hidden w-48 rounded bg-gray-900 px-2 py-1 text-xs text-white group-hover:block z-10">
@@ -337,7 +375,7 @@ function Departments() {
     setEditingItem(item);
     if (item) {
       setValue('name', item.name);
-      setValue('short_code', item.short_code || '');
+      setValue('short_code', item.shortCode || '');
     } else {
       reset({ name: '', short_code: '' });
     }
@@ -406,7 +444,7 @@ function Departments() {
               >
                 <option value="">-- Choose a certificate level --</option>
                 {levels.map(l => (
-                  <option key={l.id} value={l.id}>{l.name} {l.short_code ? `(${l.short_code})` : ''}</option>
+                  <option key={l.id} value={l.id}>{l.name} {l.shortCode ? `(${l.shortCode})` : ''}</option>
                 ))}
               </select>
             </div>
@@ -426,23 +464,23 @@ function Departments() {
             <div className="p-8 text-center text-gray-500">No departments found in this level.</div>
           ) : (
             items.map((item) => (
-              <div key={item.id} className={`flex items-center justify-between px-6 py-4 transition-colors ${!item.is_active ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''}`}>
+              <div key={item.id} className={`flex items-center justify-between px-6 py-4 transition-colors ${!item.isActive ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''}`}>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className={`font-medium ${!item.is_active ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>{item.name}</h4>
-                    <Badge variant={item.is_active ? 'success' : 'neutral'}>
-                      {item.is_active ? 'Active' : 'Inactive'}
+                    <h4 className={`font-medium ${!item.isActive ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>{item.name}</h4>
+                    <Badge variant={item.isActive ? 'success' : 'neutral'}>
+                      {item.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    {item.short_code && <span>Code: {item.short_code}</span>}
-                    {item.short_code && item.student_count !== undefined && <span className="mx-3 border-l border-gray-300 dark:border-gray-700"></span>}
+                    {item.shortCode && <span>Code: {item.shortCode}</span>}
+                    {item.shortCode && item.student_count !== undefined && <span className="mx-3 border-l border-gray-300 dark:border-gray-700"></span>}
                     {item.student_count !== undefined && <span>{item.student_count} active students</span>}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => openModal(item)}>Edit</Button>
-                  {item.is_active ? (
+                  {item.isActive ? (
                     <div className="group relative">
                       <Button variant="outline" size="sm" onClick={() => deactivate(item.id)} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Deactivate</Button>
                     </div>
@@ -611,16 +649,16 @@ function Majors() {
             <div className="p-8 text-center text-gray-500">No majors found in this department.</div>
           ) : (
             majors.map((item) => (
-              <div key={item.id} className={`flex items-center justify-between px-6 py-4 transition-colors ${!item.is_active ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''}`}>
+              <div key={item.id} className={`flex items-center justify-between px-6 py-4 transition-colors ${!item.isActive ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''}`}>
                 <div className="flex items-center gap-2">
-                  <h4 className={`font-medium ${!item.is_active ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>{item.name}</h4>
-                  <Badge variant={item.is_active ? 'success' : 'neutral'}>
-                    {item.is_active ? 'Active' : 'Inactive'}
+                  <h4 className={`font-medium ${!item.isActive ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>{item.name}</h4>
+                  <Badge variant={item.isActive ? 'success' : 'neutral'}>
+                    {item.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => openModal(item)}>Edit</Button>
-                  {item.is_active ? (
+                  {item.isActive ? (
                     <Button variant="outline" size="sm" onClick={() => deactivate(item.id)} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Deactivate</Button>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => reactivate(item.id)} className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">Reactivate</Button>

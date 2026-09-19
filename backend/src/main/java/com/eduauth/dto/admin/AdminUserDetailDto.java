@@ -1,7 +1,9 @@
 package com.eduauth.dto.admin;
 
+import com.eduauth.dto.access.AccessGrantListDto;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AdminUserDetailDto {
@@ -18,4 +20,9 @@ public class AdminUserDetailDto {
     
     // Generic object for role-specific profile data (Student, Institution, Verifier)
     private Object profile;
+
+    // Access grants info for student and verifier
+    private Integer activeAccessCount;
+    private List<AccessGrantListDto> accessGrants;
+    private List<AccessGrantListDto> accessHistory;
 }

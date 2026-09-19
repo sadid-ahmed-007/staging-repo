@@ -179,7 +179,8 @@ Every file in the project, grouped by category, with the assigned team member.
 | 77 | `frontend/.gitignore` | Git ignore rules |
 | 78 | `frontend/.oxlintrc.json` | Lint configuration |
 | 79 | `frontend/index.html` | HTML entry point |
-| 80 | `frontend/package.json` | npm dependencies and scripts |
+| 80 | `frontend/package-lock.json
+  frontend/package.json` | npm dependencies and scripts |
 | 81 | `frontend/postcss.config.js` | PostCSS config for Tailwind |
 | 82 | `frontend/tailwind.config.js` | Tailwind CSS configuration |
 | 83 | `frontend/vite.config.js` | Vite dev server config |
@@ -190,7 +191,8 @@ Every file in the project, grouped by category, with the assigned team member.
 
 | # | File | Purpose |
 |---|------|---------|
-| 86 | `frontend/src/main.jsx` | React entry point |
+| 86 | `frontend/src/services/authService.js
+  frontend/src/main.jsx` | React entry point |
 | 87 | `frontend/src/services/api.js` | Axios instance with JWT interceptor |
 | 88 | `frontend/src/services/authService.js` | Auth API helper functions |
 | 89 | `frontend/src/contexts/AuthContext.jsx` | Authentication state context |
@@ -594,7 +596,8 @@ backend/src/main/java/com/eduauth/EduAuthApplication.java
 git checkout main
 git pull origin main
 git checkout -b feature/project-setup
-git add backend/pom.xml
+git add backend/.gitignore
+  git add backend/pom.xml
 git add backend/src/main/resources/application.properties
 git add backend/src/main/java/com/eduauth/EduAuthApplication.java
 git commit -m "set up spring boot maven project"
@@ -931,13 +934,15 @@ git push origin feature/auth-services
 frontend/.gitignore
 frontend/.oxlintrc.json
 frontend/index.html
-frontend/package.json
+frontend/package-lock.json
+  frontend/package.json
 frontend/postcss.config.js
 frontend/tailwind.config.js
 frontend/vite.config.js
 frontend/README.md
 frontend/src/index.css
-frontend/src/main.jsx
+frontend/src/services/authService.js
+  frontend/src/main.jsx
 ```
 
 **GIT COMMANDS:**
@@ -948,13 +953,17 @@ git checkout -b feature/frontend-config
 git add frontend/.gitignore
 git add frontend/.oxlintrc.json
 git add frontend/index.html
-git add frontend/package.json
+git add frontend/package-lock.json
+  git add frontend/package-lock.json
+  frontend/package.json
 git add frontend/postcss.config.js
 git add frontend/tailwind.config.js
 git add frontend/vite.config.js
 git add frontend/README.md
 git add frontend/src/index.css
-git add frontend/src/main.jsx
+git add frontend/src/services/authService.js
+  git add frontend/src/services/authService.js
+  frontend/src/main.jsx
 git commit -m "frontend configuration"
 git push origin feature/frontend-config
 ```
@@ -1847,13 +1856,17 @@ git checkout -b feature/frontend-config
 git add frontend/.gitignore
 git add frontend/.oxlintrc.json
 git add frontend/index.html
-git add frontend/package.json
+git add frontend/package-lock.json
+  git add frontend/package-lock.json
+  frontend/package.json
 git add frontend/postcss.config.js
 git add frontend/tailwind.config.js
 git add frontend/vite.config.js
 git add frontend/README.md
 git add frontend/src/index.css
-git add frontend/src/main.jsx
+git add frontend/src/services/authService.js
+  git add frontend/src/services/authService.js
+  frontend/src/main.jsx
 git commit -m "frontend configuration"
 git push origin feature/frontend-config
 ```
@@ -2271,7 +2284,8 @@ git push origin feature/api-docs
 git checkout main
 git pull origin main
 git checkout -b feature/project-setup
-git add backend/pom.xml
+git add backend/.gitignore
+  git add backend/pom.xml
 git add backend/src/main/resources/application.properties
 git add backend/src/main/java/com/eduauth/EduAuthApplication.java
 git commit -m "set up spring boot maven project"

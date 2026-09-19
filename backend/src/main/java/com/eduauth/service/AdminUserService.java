@@ -1,11 +1,14 @@
 package com.eduauth.service;
 
+import com.eduauth.dto.access.AccessGrantListDto;
 import com.eduauth.dto.admin.AdminUserDetailDto;
 import com.eduauth.dto.admin.AdminUserListDto;
 import com.eduauth.dto.admin.SuspendRequestDto;
 import com.eduauth.exception.ResourceNotFoundException;
+import com.eduauth.model.AccessGrant;
 import com.eduauth.model.ActivityLog;
 import com.eduauth.model.User;
+import com.eduauth.repository.AccessGrantRepository;
 import com.eduauth.repository.ActivityLogRepository;
 import com.eduauth.repository.UserRepository;
 import com.eduauth.repository.specification.UserSpecification;
@@ -16,6 +19,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +28,8 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final AccessGrantRepository accessGrantRepository;
+    private final AccessService accessService;
 
     public Page<AdminUserListDto> getUsers(String status, String role, String search, int page, int size) {
         Specification<User> spec = UserSpecification.withFilters(status, role, search);
@@ -69,12 +76,44 @@ public class AdminUserService {
         dto.setSuspendedAt(user.getSuspendedAt());
         dto.setSuspensionReason(user.getSuspensionReason());
 
+        LocalDateTime now = LocalDateTime.now();
+
         if ("student".equals(user.getRole())) {
             dto.setProfile(user.getStudent());
+            if (user.getStudent() != null) {
+                // Who currently has access to their certs
+                List<AccessGrant> activeGrants = accessGrantRepository
+                        .findByStudentIdAndRevokedAtIsNullAndExpiresAtAfter(user.getStudent().getId(), now);
+                List<AccessGrantListDto> activeDtos = activeGrants.stream()
+                        .map(g -> accessService.toGrantDto(g, now))
+                        .collect(Collectors.toList());
+                dto.setAccessGrants(activeDtos);
+            }
         } else if ("university".equals(user.getRole())) {
             dto.setProfile(user.getInstitution());
         } else if ("verifier".equals(user.getRole())) {
             dto.setProfile(user.getVerifier());
+            if (user.getVerifier() != null) {
+                Long verifierId = user.getVerifier().getId();
+                long count = accessGrantRepository.countActiveGrantsForVerifier(verifierId, now);
+                dto.setActiveAccessCount((int) count);
+
+                // Students this verifier can currently view (active access grants)
+                List<AccessGrant> activeGrants = accessGrantRepository
+                        .findActiveGrantsForVerifier(verifierId, now);
+                List<AccessGrantListDto> activeDtos = activeGrants.stream()
+                        .map(g -> accessService.toGrantDto(g, now))
+                        .collect(Collectors.toList());
+                dto.setAccessGrants(activeDtos);
+
+                // Verifier access history
+                List<AccessGrant> allGrants = accessGrantRepository
+                        .findAllByVerifierId(verifierId);
+                List<AccessGrantListDto> historyDtos = allGrants.stream()
+                        .map(g -> accessService.toGrantDto(g, now))
+                        .collect(Collectors.toList());
+                dto.setAccessHistory(historyDtos);
+            }
         }
 
         return dto;

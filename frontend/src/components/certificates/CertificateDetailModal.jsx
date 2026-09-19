@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import toast from 'react-hot-toast';
 import Modal from '../shared/Modal';
 import Badge from '../shared/Badge';
 import Button from '../shared/Button';
 import LoadingSpinner from '../shared/LoadingSpinner';
+import api from '../../services/api';
 import { formatDate } from '../../utils/helpers';
-import { Eye, Download, Copy, Check, Loader2, Clock, ShieldX, RotateCcw, Shield } from 'lucide-react';
+import { Eye, Download, Copy, Check, Loader2, Clock, ShieldX, RotateCcw, Shield, AlertCircle, Lock, ShieldCheck } from 'lucide-react';
 
 export default function CertificateDetailModal({
   open,
@@ -19,20 +21,125 @@ export default function CertificateDetailModal({
 }) {
   const [copiedSerial, setCopiedSerial] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [linkRevealed, setLinkRevealed] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [loadingShareLink, setLoadingShareLink] = useState(false);
+  const [shareLinkError, setShareLinkError] = useState(false);
+
+  // When modal opens or certificate changes, fetch share link
+  useEffect(() => {
+    if (!open || !certificate?.id || role === 'verifier') {
+      setShareLink('');
+      setLoadingShareLink(false);
+      setShareLinkError(false);
+      setCopiedLink(false);
+      setLinkRevealed(false);
+      return;
+    }
+
+    const getBasePath = () => {
+      if (role === 'admin') return '/admin/certificates';
+      if (role === 'university') return '/university/certificates';
+      return '/student/certificates';
+    };
+
+    let isMounted = true;
+    const fetchShareLink = async () => {
+      setLoadingShareLink(true);
+      setShareLinkError(false);
+      try {
+        const basePath = getBasePath();
+        const res = await api.get(`${basePath}/${certificate.id}/share-link`);
+        const link = res.data?.shareLink || res.data?.data?.shareLink;
+        if (isMounted) {
+          if (link) {
+            setShareLink(link);
+          } else if (certificate.serial) {
+            setShareLink(`${window.location.origin}/verify?s=${encodeURIComponent(certificate.serial)}`);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch custom share-link, using standard verification URL:', err);
+        if (isMounted) {
+          if (certificate.serial) {
+            setShareLink(`${window.location.origin}/verify?s=${encodeURIComponent(certificate.serial)}`);
+            setShareLinkError(false);
+          } else {
+            setShareLinkError(true);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingShareLink(false);
+        }
+      }
+    };
+
+    fetchShareLink();
+    return () => {
+      isMounted = false;
+    };
+  }, [open, certificate?.id, certificate?.shareLink, certificate?.serial, role]);
 
   if (!open) return null;
 
-  const getVerificationUrl = (cert) => {
-    return cert.shareLink || `${window.location.origin}/verify?s=${encodeURIComponent(cert.serial)}`;
+  const getMaskedLink = (link, serial) => {
+    if (!link) return '';
+    const sIndex = link.indexOf('?s=');
+    if (sIndex !== -1) {
+      const prefix = link.substring(0, sIndex + 3);
+      const serialSnippet = serial ? serial.substring(0, 10) : '';
+      return `${prefix}${serialSnippet}...`;
+    }
+    return link.length > 38 ? `${link.substring(0, 38)}...` : link;
   };
 
-  const handleCopyVerificationLink = async (cert) => {
-    try {
-      await navigator.clipboard.writeText(getVerificationUrl(cert));
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy share link:', err);
+  const handleCopyVerificationLink = async () => {
+    let linkToCopy = shareLink;
+
+    if (!linkToCopy && certificate?.id && role !== 'verifier') {
+      try {
+        setLoadingShareLink(true);
+        const basePath = role === 'admin'
+          ? '/admin/certificates'
+          : role === 'university'
+          ? '/university/certificates'
+          : '/student/certificates';
+        const res = await api.get(`${basePath}/${certificate.id}/share-link`);
+        linkToCopy = res.data?.shareLink || res.data?.data?.shareLink;
+        if (linkToCopy) {
+          setShareLink(linkToCopy);
+        }
+      } catch (err) {
+        if (certificate.serial) {
+          linkToCopy = `${window.location.origin}/verify?s=${encodeURIComponent(certificate.serial)}`;
+          setShareLink(linkToCopy);
+        } else {
+          toast.error('Failed to get share link');
+          setLoadingShareLink(false);
+          return;
+        }
+      } finally {
+        setLoadingShareLink(false);
+      }
+    }
+
+    if (!linkToCopy && certificate?.serial) {
+      linkToCopy = `${window.location.origin}/verify?s=${encodeURIComponent(certificate.serial)}`;
+      setShareLink(linkToCopy);
+    }
+
+    if (linkToCopy) {
+      try {
+        await navigator.clipboard.writeText(linkToCopy);
+        setCopiedLink(true);
+        setLinkRevealed(true);
+        toast.success('Share link copied to clipboard');
+        setTimeout(() => setCopiedLink(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy share link:', err);
+        toast.error('Failed to copy link to clipboard');
+      }
     }
   };
 
@@ -110,13 +217,35 @@ export default function CertificateDetailModal({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {role !== 'student' && <DetailTile label="Student" value={certificate.student?.name || certificate.student_name} />}
-              <DetailTile label="Institution" value={certificate.institution?.name || certificate.institution_name} />
+              {role !== 'student' && (
+                <DetailTile 
+                  label="Student" 
+                  value={
+                    certificate.student?.name || 
+                    certificate.studentName || 
+                    certificate.student_name || 
+                    certificate.issuedName || 
+                    certificate.issued_name
+                  } 
+                />
+              )}
+              <DetailTile 
+                label="Institution" 
+                value={
+                  certificate.institution?.name || 
+                  certificate.institutionName || 
+                  certificate.institution_name
+                } 
+              />
               <DetailTile label="Issue Date" value={formatDate(certificate.issueDate || certificate.issue_date)} />
-              <DetailTile label="Program" value={certificate.enrollment?.program || certificate.certificate_name} />
-              <DetailTile label="Major" value={certificate.major} />
-              <DetailTile label="CGPA" value={certificate.cgpa} />
-              <DetailTile label="Registration No" value={certificate.enrollment?.rollNumber || certificate.enrollment?.enrollmentNumber || certificate.roll_number} />
+              <DetailTile label="Program / Degree" value={certificate.program || certificate.enrollment?.program || certificate.certificateName || certificate.certificate_name} />
+              <DetailTile label="Department" value={certificate.department || certificate.enrollment?.department} />
+              <DetailTile label="Major" value={certificate.major || certificate.enrollment?.major} />
+              <DetailTile label="CGPA" value={certificate.cgpa != null ? certificate.cgpa : certificate.enrollment?.cgpa} />
+              {certificate.degreeClass && (
+                <DetailTile label="Degree Class" value={certificate.degreeClass} />
+              )}
+              <DetailTile label="Registration / Roll No" value={certificate.rollNumber || certificate.enrollment?.rollNumber || certificate.enrollment?.enrollmentNumber || certificate.enrollmentNumber || certificate.roll_number} />
             </div>
             
             {/* Admin Revocation History Section */}
@@ -186,9 +315,61 @@ export default function CertificateDetailModal({
             )}
           </div>
 
-          {/* Verification Section */}
-          <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-stretch rounded-2xl border border-[var(--border)] p-5 bg-[var(--bg-surface)]">
-            {role === 'student' && (
+          {/* Verifier Actions: Academic Inspection Only (No verification link or QR code) */}
+          {role === 'verifier' && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-[var(--border)] p-4 bg-[var(--bg-surface)]">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Verified Access Active</p>
+                  <p className="text-xs text-[var(--text-secondary)]">You are reviewing authorized certificate details for this student.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {certificate.isPubliclyShareable ? (
+                  <>
+                    {onPreviewPdf && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onPreviewPdf(certificate)}
+                        disabled={downloadingId === certificate.id}
+                        className="shrink-0"
+                      >
+                        <Eye className="mr-1.5 h-3.5 w-3.5" />
+                        Preview PDF
+                      </Button>
+                    )}
+                    {onDownloadPdf && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onDownloadPdf(certificate)}
+                        disabled={downloadingId === certificate.id}
+                        className="shrink-0"
+                      >
+                        {downloadingId === certificate.id ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Download PDF
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)]">
+                    <Lock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                    Private PDF (Download Restricted)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Verification Section (Only visible to Student, University, and Admin) */}
+          {role !== 'verifier' && (
+            <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-stretch rounded-2xl border border-[var(--border)] p-5 bg-[var(--bg-surface)]">
               <div className="flex-1 space-y-4 w-full">
                 <div>
                   <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Verification Link</h3>
@@ -196,13 +377,22 @@ export default function CertificateDetailModal({
                     Use this link or the QR code to verify this certificate's authenticity.
                   </p>
                   <div className="mt-3 rounded-lg bg-[var(--bg-elevated)] p-3 border border-[var(--border)] break-all text-sm font-mono text-[var(--text-primary)]">
-                    {getVerificationUrl(certificate)}
+                    {loadingShareLink && !shareLink ? (
+                      <span className="text-[var(--text-muted)] italic animate-pulse">Loading share link...</span>
+                    ) : shareLinkError && !shareLink ? (
+                      <span className="text-[var(--danger)]">Verification link unavailable</span>
+                    ) : shareLink ? (
+                      linkRevealed ? shareLink : getMaskedLink(shareLink, certificate.serial)
+                    ) : (
+                      <span className="text-[var(--text-muted)] italic">Generating share link...</span>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 whitespace-nowrap">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
-                    onClick={() => handleCopyVerificationLink(certificate)}
+                    onClick={handleCopyVerificationLink}
+                    disabled={loadingShareLink && !shareLink}
                     className="shrink-0"
                   >
                     {copiedLink ? (
@@ -213,76 +403,69 @@ export default function CertificateDetailModal({
                     ) : (
                       <>
                         <Copy className="mr-1.5 h-3.5 w-3.5" />
-                        Copy Share Link
+                        Copy Link
                       </>
                     )}
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onPreviewPdf(certificate)}
-                    disabled={downloadingId === certificate.id}
-                    className="shrink-0"
-                  >
-                    <Eye className="mr-1.5 h-3.5 w-3.5" />
-                    Preview PDF
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onDownloadPdf(certificate)}
-                    disabled={downloadingId === certificate.id}
-                    className="shrink-0"
-                  >
-                    {downloadingId === certificate.id ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Download PDF
-                  </Button>
+                  {onPreviewPdf && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onPreviewPdf(certificate)}
+                      disabled={downloadingId === certificate.id}
+                      className="shrink-0"
+                    >
+                      <Eye className="mr-1.5 h-3.5 w-3.5" />
+                      Preview PDF
+                    </Button>
+                  )}
+                  {onDownloadPdf && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onDownloadPdf(certificate)}
+                      disabled={downloadingId === certificate.id}
+                      className="shrink-0"
+                    >
+                      {downloadingId === certificate.id ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Download PDF
+                    </Button>
+                  )}
                 </div>
               </div>
-            )}
-
-            {role !== 'student' && (
-              <div className="flex-1 flex flex-col justify-center gap-3">
-                <Button
-                  onClick={() => onPreviewPdf(certificate)}
-                  disabled={downloadingId === certificate.id}
-                  className="w-full sm:w-auto"
-                  variant="outline"
-                >
-                  <Eye className="mr-1.5 h-4 w-4" />
-                  Preview PDF
-                </Button>
-                <Button
-                  onClick={() => onDownloadPdf(certificate)}
-                  disabled={downloadingId === certificate.id}
-                  className="w-full sm:w-auto"
-                >
-                  {downloadingId === certificate.id ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-1.5 h-4 w-4" />
-                  )}
-                  Download PDF
-                </Button>
+              
+              {/* Right Column: QR Code */}
+              <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm min-w-[200px]">
+                {loadingShareLink && !shareLink ? (
+                  <div className="w-[180px] h-[180px] flex flex-col items-center justify-center rounded-lg bg-gray-50 border border-dashed border-gray-200 animate-pulse">
+                    <Loader2 className="h-8 w-8 text-[var(--brand)] animate-spin mb-2" />
+                    <span className="text-xs text-gray-500 font-medium">Generating QR...</span>
+                  </div>
+                ) : shareLink ? (
+                  <>
+                    <QRCodeSVG
+                      value={shareLink}
+                      size={180}
+                      level="H"
+                      includeMargin={true}
+                      fgColor="#0f172a"
+                      bgColor="#ffffff"
+                    />
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Scan to verify</p>
+                  </>
+                ) : (
+                  <div className="w-[180px] h-[180px] flex flex-col items-center justify-center rounded-lg bg-gray-50 border border-dashed border-gray-200 text-center p-4">
+                    <AlertCircle className="h-8 w-8 text-gray-400 mb-2" />
+                    <span className="text-xs font-semibold text-gray-500">QR unavailable</span>
+                  </div>
+                )}
               </div>
-            )}
-            
-            <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm">
-              <QRCodeSVG
-                value={getVerificationUrl(certificate)}
-                size={120}
-                level="H"
-                includeMargin={true}
-                fgColor="#0f172a"
-                bgColor="#ffffff"
-              />
-              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Scan to verify</p>
             </div>
-          </div>
+          )}
         </div>
       ) : null}
     </Modal>

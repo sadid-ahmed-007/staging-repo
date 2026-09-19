@@ -130,15 +130,19 @@ public class Certificate {
         return revokedAt != null;
     }
 
-    /** Full name used on certificate — falls back to user name if issuedName is blank. */
+    /** Full name used on certificate — falls back to student name or email if issuedName is blank. */
     public String getStudentDisplayName() {
-        if (student == null) return "N/A";
         if (issuedName != null && !issuedName.isBlank()) return issuedName;
-        if (student.getFirstName() != null) {
-            return (student.getFirstName() + " "
-                    + (student.getMiddleName() != null ? student.getMiddleName() + " " : "")
-                    + student.getLastName()).trim();
+        if (student != null) {
+            if (student.getFirstName() != null) {
+                return (student.getFirstName() + " "
+                        + (student.getMiddleName() != null ? student.getMiddleName() + " " : "")
+                        + student.getLastName()).trim();
+            }
+            if (student.getUser() != null && student.getUser().getEmail() != null) {
+                return student.getUser().getEmail();
+            }
         }
-        return student.getUser() != null ? student.getUser().getEmail() : "N/A";
+        return "N/A";
     }
 }

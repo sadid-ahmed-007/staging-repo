@@ -70,6 +70,7 @@ export default function AdminDashboard() {
             label="Total Certificates" 
             value={stats?.totalCertificates ?? 0} 
             color="blue"
+            to="/admin/certificates"
           />
           <StatCard 
             icon={<Building className="h-5 w-5 text-green-500" />} 

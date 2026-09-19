@@ -6,6 +6,7 @@ import { cn } from '../../utils/helpers';
 
 export default function Modal({ isOpen, open, onClose, title, size = 'md', children, footer }) {
   const actualIsOpen = isOpen !== undefined ? isOpen : open;
+  const safeOnClose = typeof onClose === 'function' ? onClose : () => {};
   
   const sizes = {
     sm: 'max-w-md',
@@ -15,7 +16,7 @@ export default function Modal({ isOpen, open, onClose, title, size = 'md', child
   };
 
   return (
-    <Dialog open={actualIsOpen} onClose={onClose} className="relative z-50">
+    <Dialog open={actualIsOpen} onClose={safeOnClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <DialogPanel className={cn(
@@ -31,7 +32,7 @@ export default function Modal({ isOpen, open, onClose, title, size = 'md', child
           )}
           
           <div className="absolute right-4 top-4 z-10">
-            <Button variant="ghost" size="sm" onClick={onClose} className="!p-1 h-auto text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <Button variant="ghost" size="sm" onClick={safeOnClose} className="!p-1 h-auto text-[var(--text-muted)] hover:text-[var(--text-primary)]">
               <X className="h-5 w-5" />
             </Button>
           </div>

@@ -19,6 +19,8 @@ export default function Button({
     primary: 'bg-[var(--brand)] text-[var(--text-inverse)] hover:bg-[var(--brand-hover)]',
     secondary: 'border border-[var(--border-strong)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]',
     danger: 'bg-[var(--danger)] text-[var(--text-inverse)] opacity-90 hover:opacity-100',
+    warning: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm',
+    amber: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm',
     success: 'bg-[var(--success)] text-[var(--text-inverse)] hover:bg-[var(--success-hover)]',
     info: 'bg-[var(--info)] text-[var(--text-inverse)] hover:bg-[var(--info-hover)]',
     ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]',

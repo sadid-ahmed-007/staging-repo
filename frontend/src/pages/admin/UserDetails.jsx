@@ -14,6 +14,7 @@ import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import Modal from '../../components/shared/Modal';
+import ConfirmModal from '../../components/shared/ConfirmModal';
 import RestoreModal from '../../components/shared/RestoreModal';
 import StatusTimeline from '../../components/shared/StatusTimeline';
 import api from '../../services/api';
@@ -54,6 +55,7 @@ const TABS_STUDENT = [
   { id: 'overview', label: 'Overview', icon: User },
   { id: 'certificates', label: 'Certificates', icon: FileText },
   { id: 'enrollments', label: 'Enrollments', icon: BookOpen },
+  { id: 'access-grants', label: 'Active Access Grants', icon: ShieldCheck },
   { id: 'activity', label: 'Activity', icon: Activity },
 ];
 
@@ -66,6 +68,7 @@ const TABS_UNIVERSITY = [
 
 const TABS_VERIFIER = [
   { id: 'overview', label: 'Overview', icon: ShieldCheck },
+  { id: 'access-grants', label: 'Students with Access', icon: UserCheck },
   { id: 'activity', label: 'Activity', icon: Activity },
 ];
 
@@ -133,11 +136,15 @@ export default function AdminUserDetails() {
   const [showSuspend, setShowSuspend] = useState(false);
   const [suspendReason, setSuspendReason] = useState('');
 
+  // Access grant revoke modal
+  const [grantRevokeTarget, setGrantRevokeTarget] = useState(null);
+  const [grantRevokeLoading, setGrantRevokeLoading] = useState(false);
+
   const fetchUser = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get(`/admin/users/${id}`);
-      setUser(data.user);
+      setUser(data.user || data.data);
     } catch {
       toast.error('Failed to load user.');
       navigate('/admin/users');
@@ -145,6 +152,26 @@ export default function AdminUserDetails() {
       setLoading(false);
     }
   }, [id, navigate]);
+
+  const handleRevokeGrant = async () => {
+    if (!grantRevokeTarget) return;
+    setGrantRevokeLoading(true);
+    try {
+      const { data } = await api.delete(`/admin/access-grants/${grantRevokeTarget.id}`);
+      if (data.success) {
+        toast.success(data.message || 'Access grant revoked successfully');
+        setGrantRevokeTarget(null);
+        fetchUser();
+      } else {
+        toast.error(data.message || 'Failed to revoke access grant');
+      }
+    } catch (err) {
+      console.error('Failed to revoke grant:', err);
+      toast.error(err.response?.data?.message || 'Failed to revoke access grant');
+    } finally {
+      setGrantRevokeLoading(false);
+    }
+  };
 
   const fetchCertificates = useCallback(async (page = 1) => {
     setCertsLoading(true);
@@ -469,7 +496,13 @@ export default function AdminUserDetails() {
         </div>
 
         {/* Tab content */}
-        {tab === 'overview' && <OverviewTab user={user} onStatClick={handleStatClick} />}
+        {tab === 'overview' && (
+          <OverviewTab
+            user={user}
+            onStatClick={handleStatClick}
+            onRevokeGrant={(grant) => setGrantRevokeTarget(grant)}
+          />
+        )}
         {tab === 'certificates' && (
           <CertificatesTab
             certificates={certificates}
@@ -495,6 +528,12 @@ export default function AdminUserDetails() {
             role={user.role}
             filter={enrollsFilter}
             onFilterChange={setEnrollsFilter}
+          />
+        )}
+        {tab === 'access-grants' && (
+          <AccessGrantsTab
+            user={user}
+            onRevokeGrant={(grant) => setGrantRevokeTarget(grant)}
           />
         )}
         {tab === 'activity' && (
@@ -584,6 +623,20 @@ export default function AdminUserDetails() {
           />
         ) : null}
       </Modal>
+
+      {/* Revoke Access Grant Modal */}
+      <ConfirmModal
+        isOpen={!!grantRevokeTarget}
+        onClose={() => !grantRevokeLoading && setGrantRevokeTarget(null)}
+        onConfirm={handleRevokeGrant}
+        title="Revoke Access Grant"
+        message={`Are you sure you want to revoke access between ${
+          grantRevokeTarget?.verifierCompany || grantRevokeTarget?.verifierName || 'the verifier'
+        } and ${grantRevokeTarget?.studentName || 'the student'}? This will immediately terminate certificate access.`}
+        confirmText="Revoke Access"
+        confirmVariant="danger"
+        isLoading={grantRevokeLoading}
+      />
     </DashboardLayout>
   );
 }
@@ -592,7 +645,9 @@ export default function AdminUserDetails() {
    TAB COMPONENTS
    ═══════════════════════════════════════════════════════════════════════ */
 
-function OverviewTab({ user, onStatClick }) {
+function OverviewTab({ user, onStatClick, onRevokeGrant }) {
+  const accessGrants = user.accessGrants || user.access_grants || [];
+
   return (
     <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
       {/* Left Column */}
@@ -659,6 +714,104 @@ function OverviewTab({ user, onStatClick }) {
             ))}
           </Card>
         )}
+
+        {/* Active Access Grants for students */}
+        {user.role === 'student' && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Access Grants</h2>
+              </div>
+              <Badge variant="primary">{accessGrants.length}</Badge>
+            </div>
+            {accessGrants.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No active access grants for this student.</p>
+            ) : (
+              <div className="space-y-3">
+                {accessGrants.map((grant) => (
+                  <div key={grant.id} className="rounded-xl border border-gray-100 dark:border-gray-800 p-4 space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {grant.verifierCompany || grant.verifier_company || grant.verifierName || grant.verifier_name || 'Verifier'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {grant.verifierName || grant.verifier_name ? `${grant.verifierName || grant.verifier_name} · ` : ''}{grant.verifierEmail || grant.verifier_email}
+                        </p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => onRevokeGrant && onRevokeGrant(grant)}
+                      >
+                        Revoke
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                      <span>Granted: {formatDate(grant.grantedAt || grant.granted_at)}</span>
+                      <span>·</span>
+                      <span>Expires: {formatDate(grant.expiresAt || grant.expires_at)}</span>
+                      {grant.daysRemaining !== undefined && (
+                        <Badge variant={grant.daysRemaining > 3 ? 'success' : 'warning'} size="sm">
+                          {grant.daysRemaining} days left
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Students with Active Access for verifiers */}
+        {user.role === 'verifier' && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Students with Active Access</h2>
+              </div>
+              <Badge variant="primary">{accessGrants.length}</Badge>
+            </div>
+            {accessGrants.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">This verifier currently has no active student access.</p>
+            ) : (
+              <div className="space-y-3">
+                {accessGrants.map((grant) => (
+                  <div key={grant.id} className="rounded-xl border border-gray-100 dark:border-gray-800 p-4 space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {grant.studentName || grant.student_name || 'Student'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {grant.studentEmail || grant.student_email}
+                        </p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => onRevokeGrant && onRevokeGrant(grant)}
+                      >
+                        Revoke
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                      <span>Expires: {formatDate(grant.expiresAt || grant.expires_at)}</span>
+                      {grant.daysRemaining !== undefined && (
+                        <Badge variant={grant.daysRemaining > 3 ? 'success' : 'warning'} size="sm">
+                          {grant.daysRemaining} days left
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
 
       {/* Right Column */}
@@ -687,6 +840,210 @@ function OverviewTab({ user, onStatClick }) {
           </Card>
         )}
       </div>
+    </div>
+  );
+}
+
+function AccessGrantsTab({ user, onRevokeGrant }) {
+  const grants = user.accessGrants || user.access_grants || [];
+  const history = user.accessHistory || user.access_history || [];
+
+  if (user.role === 'student') {
+    return (
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Access Grants</h2>
+          </div>
+          <Badge variant="primary">{grants.length} active</Badge>
+        </div>
+
+        {grants.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-center">
+            <ShieldCheck className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">No active access grants for this student.</p>
+            <p className="text-xs text-gray-400 mt-1">When verifiers are granted access to certificates, they will appear here.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full min-w-[700px] text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  {['Verifier Company', 'Contact Person', 'Verifier Email', 'Granted Date', 'Expires Date', 'Days Left', 'Status', ''].map((h) => (
+                    <th key={h} className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {grants.map((grant) => (
+                  <tr key={grant.id} className="h-12 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white text-xs">
+                      {grant.verifierCompany || grant.verifier_company || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300 text-xs">
+                      {grant.verifierName || grant.verifier_name || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs font-mono">
+                      {grant.verifierEmail || grant.verifier_email || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      {formatDate(grant.grantedAt || grant.granted_at)}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      {formatDate(grant.expiresAt || grant.expires_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant={grant.daysRemaining > 3 ? 'success' : 'warning'} size="sm">
+                        {grant.daysRemaining ?? 0} days
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant={grant.isActive ?? grant.active ? 'success' : 'danger'} size="sm">
+                        {grant.isActive ?? grant.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => onRevokeGrant && onRevokeGrant(grant)}
+                      >
+                        Revoke
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Students with Active Access</h2>
+          </div>
+          <Badge variant="primary">{grants.length} active</Badge>
+        </div>
+
+        {grants.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-center">
+            <UserCheck className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">This verifier currently has no active student access.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full min-w-[700px] text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  {['Student Name', 'Student Email', 'Granted Date', 'Access Expiry', 'Days Remaining', 'Status', ''].map((h) => (
+                    <th key={h} className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {grants.map((grant) => (
+                  <tr key={grant.id} className="h-12 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white text-xs">
+                      {grant.studentName || grant.student_name || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs font-mono">
+                      {grant.studentEmail || grant.student_email || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      {formatDate(grant.grantedAt || grant.granted_at)}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      {formatDate(grant.expiresAt || grant.expires_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant={grant.daysRemaining > 3 ? 'success' : 'warning'} size="sm">
+                        {grant.daysRemaining ?? 0} days
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant="success" size="sm">Active</Badge>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => onRevokeGrant && onRevokeGrant(grant)}
+                      >
+                        Revoke
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {history.length > 0 && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Access History</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{history.length} total records</p>
+          </div>
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full min-w-[700px] text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  {['Student Name', 'Student Email', 'Granted Date', 'Expires Date', 'Revoked Date', 'Status'].map((h) => (
+                    <th key={h} className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {history.map((h) => {
+                  const isRevoked = !!(h.revokedAt || h.revoked_at);
+                  const isExpired = !isRevoked && !(h.isActive ?? h.active);
+                  const statusVariant = isRevoked ? 'danger' : isExpired ? 'default' : 'success';
+                  const statusLabel = isRevoked ? 'Revoked' : isExpired ? 'Expired' : 'Active';
+
+                  return (
+                    <tr key={h.id} className="h-12 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white text-xs">
+                        {h.studentName || h.student_name || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs font-mono">
+                        {h.studentEmail || h.student_email || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                        {formatDate(h.grantedAt || h.granted_at)}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                        {formatDate(h.expiresAt || h.expires_at)}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                        {h.revokedAt || h.revoked_at ? formatDate(h.revokedAt || h.revoked_at) : '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant={statusVariant} size="sm">{statusLabel}</Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

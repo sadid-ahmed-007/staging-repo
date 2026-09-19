@@ -49,7 +49,12 @@ INSERT INTO users (id, email, password, role, email_verified_at, is_approved, ap
 (13, 'suspended.student@gmail.com', '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'student',    NOW(), 1,    1,    NOW(), NOW(), 'Violated terms of service.', NOW(), NOW()),
 (14, 'suspended.university@brac.bd','$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'university', NOW(), 1,    1,    NOW(), NOW(), 'Fraudulent activities reported.', NOW(), NOW()),
 (15, 'pending.university@aiub.edu', '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'university', NOW(), 0,    NULL, NULL,  NULL, NULL, NOW(), NOW()),
-(16, 'pending.verifier@bdjobs.com', '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'verifier',   NOW(), 0,    NULL, NULL,  NULL, NULL, NOW(), NOW());
+(16, 'pending.verifier@bdjobs.com', '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'verifier',   NOW(), 0,    NULL, NULL,  NULL, NULL, NOW(), NOW()),
+(17, 'tanvir.hasan@uiu.ac.bd',       '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'student',    NOW(), 1,    1,    NOW(), NULL, NULL, NOW(), NOW()),
+(18, 'ayesha.siddiqua@uiu.ac.bd',   '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'student',    NOW(), 1,    1,    NOW(), NULL, NULL, NOW(), NOW()),
+(19, 'nafis.imtiaz@uiu.ac.bd',      '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'student',    NOW(), 1,    1,    NOW(), NULL, NULL, NOW(), NOW()),
+(20, 'zarin.tasnim@uiu.ac.bd',      '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'student',    NOW(), 1,    1,    NOW(), NULL, NULL, NOW(), NOW()),
+(21, 'farhan.kabir@uiu.ac.bd',      '$2y$12$KQuyd8vLPSkE4EiTxkw/DuS316qiKBbNx80i/mwuRPmOEaKhXxiEm', 'student',    NOW(), 1,    1,    NOW(), NULL, NULL, NOW(), NOW());
 
 -- INSTITUTIONS
 INSERT INTO institutions (id, user_id, name, registration_number, address, city, phone, website, default_authority_name, default_authority_title, created_at, updated_at) VALUES
@@ -66,7 +71,12 @@ INSERT INTO students (id, user_id, first_name, middle_name, last_name, nid_hash,
 (4, 9,  'Kanij',        NULL,   'Fatema',   SHA2('NID-010101-004', 256), NULL, '2001-06-15', 'Female', '+8801700001004', 'Gulshan, Dhaka',     NOW(), NOW()),
 (5, 10, 'Safwan Al',    NULL,   'Sajid',    SHA2('NID-010101-005', 256), NULL, '2000-11-20', 'Male',   '+8801700001005', 'Dhanmondi, Dhaka',   NOW(), NOW()),
 (6, 11, 'Pending',      NULL,   'Student',  SHA2('NID-010101-006', 256), NULL, '2003-03-10', 'Other',  '+8801700001006', 'Banani, Dhaka',      NOW(), NOW()),
-(7, 13, 'Suspended',    NULL,   'User',     SHA2('NID-010101-007', 256), NULL, '2001-01-01', 'Male',   '+8801700001007', 'Mohakhali, Dhaka',   NOW(), NOW());
+(7, 13, 'Suspended',    NULL,   'User',     SHA2('NID-010101-007', 256), NULL, '2001-01-01', 'Male',   '+8801700001007', 'Mohakhali, Dhaka',   NOW(), NOW()),
+(8, 17, 'Tanvir',       NULL,   'Hasan',    SHA2('NID-010101-008', 256), NULL, '2003-02-14', 'Male',   '+8801700001008', 'Dhanmondi, Dhaka',   NOW(), NOW()),
+(9, 18, 'Ayesha',       NULL,   'Siddiqua', SHA2('NID-010101-009', 256), NULL, '2003-05-21', 'Female', '+8801700001009', 'Bashundhara, Dhaka', NOW(), NOW()),
+(10,19, 'Nafis',        NULL,   'Imtiaz',   SHA2('NID-010101-010', 256), NULL, '2002-09-10', 'Male',   '+8801700001010', 'Uttara, Dhaka',      NOW(), NOW()),
+(11,20, 'Zarin',        NULL,   'Tasnim',   SHA2('NID-010101-011', 256), NULL, '2003-11-05', 'Female', '+8801700001011', 'Mirpur, Dhaka',      NOW(), NOW()),
+(12,21, 'Farhan',       NULL,   'Kabir',    SHA2('NID-010101-012', 256), NULL, '2002-07-19', 'Male',   '+8801700001012', 'Gulshan, Dhaka',     NOW(), NOW());
 
 -- VERIFIERS
 INSERT INTO verifiers (id, user_id, company_name, contact_person, designation, email, phone, purpose, address, website, created_at, updated_at) VALUES
@@ -126,7 +136,12 @@ INSERT INTO enrollments (id, enrollment_number, student_id, institution_id, roll
 (5, 'UIU-21-000005', 4, 1, '111223-0501', 3, 7, 'Bachelor of Business Administration',                    'Fall 2021',   'withdrawn', NULL, '2021-08-15', '2025-08-15', NULL,         2, 2, NOW(), NOW()),
 (6, 'UIU-20-000006', 5, 1, '021223-0502', 2, 6, 'Bachelor of Science in Electrical and Electronic Engineering', 'Spring 2020', 'suspended', 'Academic misconduct investigation pending.', '2020-01-15', '2024-05-30', NULL, 2, 1, NOW(), NOW()),
 (7, 'NSU-24-000007', 7, 2, '2410001',     4, 9, 'Bachelor of Science in Computer Science',                'Spring 2024', 'suspended', 'Disciplinary action.', '2024-01-15', '2028-01-15', NULL, 12, 7, NOW(), NOW()),
-(8, 'BRAC-23-00001', 3, 3, '2310001',     7, 13,'Bachelor of Science in Computer Science',                'Summer 2023', 'active',    NULL, '2023-05-15', '2027-05-15', NULL,         14,10, NOW(), NOW());
+(8, 'BRAC-23-00001', 3, 3, '2310001',     7, 13,'Bachelor of Science in Computer Science',                'Summer 2023', 'active',    NULL, '2023-05-15', '2027-05-15', NULL,         14,10, NOW(), NOW()),
+(9,  'UIU-23-000009', 8,  1, '011231-0101', 1, 1, 'Bachelor of Science in Computer Science and Engineering||CSE||Software Engineering', 'Spring 2023', 'active', NULL, '2023-01-15', '2027-01-15', NULL, 2, 1, NOW(), NOW()),
+(10, 'UIU-23-000010', 9,  1, '011231-0202', 1, 2, 'Bachelor of Science in Computer Science and Engineering||CSE||Data Science',         'Spring 2023', 'active', NULL, '2023-01-15', '2027-01-15', NULL, 2, 1, NOW(), NOW()),
+(11, 'UIU-24-000011', 10, 1, '011241-0303', 1, 3, 'Bachelor of Science in Computer Science and Engineering||CSE||Artificial Intelligence', 'Fall 2024',   'active', NULL, '2024-08-15', '2028-08-15', NULL, 2, 1, NOW(), NOW()),
+(12, 'UIU-24-000012', 11, 1, '111241-0404', 3, 7, 'Bachelor of Business Administration||BBA||Marketing',                                   'Fall 2024',   'active', NULL, '2024-08-15', '2028-08-15', NULL, 2, 2, NOW(), NOW()),
+(13, 'UIU-25-000013', 12, 1, '021251-0505', 2, 6, 'Bachelor of Science in Electrical and Electronic Engineering||EEE||Power Systems',        'Spring 2025', 'active', NULL, '2025-01-15', '2029-01-15', NULL, 2, 1, NOW(), NOW());
 
 -- CERTIFICATE SEQUENCES
 INSERT INTO certificate_sequences (id, sequence_key, prefix, year_suffix, current_sequence, last_generated_at, created_at, updated_at) VALUES

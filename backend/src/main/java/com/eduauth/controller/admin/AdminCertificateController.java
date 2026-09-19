@@ -29,6 +29,7 @@ public class AdminCertificateController {
 
         private final CertificateRepository certificateRepository;
         private final ActivityLogRepository activityLogRepository;
+        private final com.eduauth.service.CertificateService certificateService;
 
         // ── GET /api/admin/certificates ───────────────────────────────────────────
 
@@ -85,6 +86,7 @@ public class AdminCertificateController {
                 }
 
                 Map<String, Object> studentInfo = new LinkedHashMap<>();
+                studentInfo.put("name", cert.getStudentDisplayName());
                 if (cert.getStudent() != null) {
                         studentInfo.put("id", cert.getStudent().getId());
                         studentInfo.put("firstName", cert.getStudent().getFirstName());
@@ -116,6 +118,10 @@ public class AdminCertificateController {
                 data.put("id", cert.getId());
                 data.put("serial", cert.getSerial());
                 data.put("issuedName", cert.getIssuedName());
+                data.put("studentName", cert.getStudentDisplayName());
+                data.put("student_name", cert.getStudentDisplayName());
+                data.put("institutionName", cert.getInstitution() != null ? cert.getInstitution().getName() : null);
+                data.put("institution_name", cert.getInstitution() != null ? cert.getInstitution().getName() : null);
                 data.put("certificateLevel", cert.getCertificateLevel());
                 data.put("certificateName", cert.getCertificateName());
                 data.put("department", cert.getDepartment());
@@ -136,11 +142,38 @@ public class AdminCertificateController {
                 data.put("revocationHistory", cert.getRevocationHistory());
                 data.put("createdAt", cert.getCreatedAt());
                 data.put("updatedAt", cert.getUpdatedAt());
+                data.put("shareLink", certificateService.buildShareLink(cert));
                 data.put("student", studentInfo);
                 data.put("institution", institutionInfo);
                 data.put("enrollment", enrollmentInfo);
 
                 return ResponseEntity.ok(Map.of("success", true, "data", data));
+        }
+
+        // ── GET /api/admin/certificates/{id}/pdf ──────────────────────────────────
+
+        @GetMapping("/{id}/pdf")
+        @Transactional(readOnly = true)
+        public ResponseEntity<?> downloadPdf(@PathVariable Long id) {
+                Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
+                if (cert == null) {
+                        return ResponseEntity.status(404)
+                                        .body(Map.of("success", false, "message", "Certificate not found"));
+                }
+                return certificateService.generatePdf(cert);
+        }
+
+        // ── GET /api/admin/certificates/{id}/share-link ───────────────────────────
+
+        @GetMapping("/{id}/share-link")
+        @Transactional(readOnly = true)
+        public ResponseEntity<?> getShareLink(@PathVariable Long id) {
+                Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
+                if (cert == null) {
+                        return ResponseEntity.status(404)
+                                        .body(Map.of("success", false, "message", "Certificate not found"));
+                }
+                return ResponseEntity.ok(Map.of("success", true, "shareLink", certificateService.buildShareLink(cert)));
         }
 
         // ── POST /api/admin/certificates/{id}/revoke ──────────────────────────────

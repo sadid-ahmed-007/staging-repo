@@ -5,6 +5,7 @@ import com.eduauth.model.Institution;
 import com.eduauth.model.User;
 import com.eduauth.repository.CertificateRepository;
 import com.eduauth.repository.InstitutionRepository;
+import com.eduauth.service.CertificateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
  *
  * GET /api/university/certificates         → paginated list of own certificates
  * GET /api/university/certificates/{id}    → full details (must belong to this university)
+ * GET /api/university/certificates/{id}/pdf → PDF certificate download
  */
 @RestController
 @RequestMapping("/api/university/certificates")
@@ -36,6 +38,7 @@ public class UniversityCertificateController {
 
     private final InstitutionRepository   institutionRepository;
     private final CertificateRepository   certificateRepository;
+    private final CertificateService       certificateService;
 
     // ── GET /api/university/certificates ─────────────────────────────────────
 
@@ -82,8 +85,11 @@ public class UniversityCertificateController {
                     m.put("id",               c.getId());
                     m.put("serial",           c.getSerial());
                     m.put("studentName",      c.getStudentDisplayName());
+                    m.put("student_name",     c.getStudentDisplayName());
                     m.put("studentEmail",     c.getStudent() != null && c.getStudent().getUser() != null
                                                 ? c.getStudent().getUser().getEmail() : null);
+                    m.put("institutionName",  institution.getName());
+                    m.put("institution_name", institution.getName());
                     m.put("certificateName",   c.getCertificateName());
                     m.put("certificateLevel",  c.getCertificateLevel());
                     m.put("cgpa",              c.getCgpa());
@@ -131,6 +137,7 @@ public class UniversityCertificateController {
 
         // Student info
         Map<String, Object> studentInfo = new LinkedHashMap<>();
+        studentInfo.put("name", cert.getStudentDisplayName());
         if (cert.getStudent() != null) {
             studentInfo.put("id",        cert.getStudent().getId());
             studentInfo.put("firstName",  cert.getStudent().getFirstName());
@@ -138,6 +145,17 @@ public class UniversityCertificateController {
             studentInfo.put("email",      cert.getStudent().getUser() != null
                                             ? cert.getStudent().getUser().getEmail() : null);
         }
+
+        // Institution info
+        Institution inst = cert.getInstitution() != null ? cert.getInstitution() : institution;
+        Map<String, Object> institutionInfo = new LinkedHashMap<>();
+        institutionInfo.put("id",                 inst.getId());
+        institutionInfo.put("name",               inst.getName());
+        institutionInfo.put("city",               inst.getCity());
+        institutionInfo.put("address",            inst.getAddress());
+        institutionInfo.put("phone",              inst.getPhone());
+        institutionInfo.put("website",            inst.getWebsite());
+        institutionInfo.put("registrationNumber", inst.getRegistrationNumber());
 
         // Enrollment info
         Map<String, Object> enrollmentInfo = null;
@@ -157,6 +175,9 @@ public class UniversityCertificateController {
         data.put("serial",              cert.getSerial());
         data.put("issuedName",          cert.getIssuedName());
         data.put("studentName",         cert.getStudentDisplayName());
+        data.put("student_name",        cert.getStudentDisplayName());
+        data.put("institutionName",     inst.getName());
+        data.put("institution_name",    inst.getName());
         data.put("certificateLevel",    cert.getCertificateLevel());
         data.put("certificateName",     cert.getCertificateName());
         data.put("department",          cert.getDepartment());
@@ -173,9 +194,62 @@ public class UniversityCertificateController {
         data.put("revokedByRole",       cert.getRevokedByRole());
         data.put("revocationReason",    cert.getRevocationReason());
         data.put("createdAt",           cert.getCreatedAt());
+        data.put("shareLink",           certificateService.buildShareLink(cert));
         data.put("student",             studentInfo);
+        data.put("institution",         institutionInfo);
         data.put("enrollment",          enrollmentInfo);
 
         return ResponseEntity.ok(Map.of("success", true, "data", data));
     }
+
+    // ── GET /api/university/certificates/{id}/pdf ────────────────────────────
+
+    @GetMapping("/{id}/pdf")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<?> downloadPdf(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+
+        Institution institution = institutionRepository.findByUserEmail(user.getEmail())
+                .orElse(null);
+        if (institution == null) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Institution profile not found"));
+        }
+
+        Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
+        if (cert == null || !cert.getInstitutionId().equals(institution.getId())) {
+            return ResponseEntity.status(cert == null ? 404 : 403)
+                    .body(Map.of("success", false,
+                                 "message", cert == null ? "Certificate not found" : "Access denied"));
+        }
+
+        return certificateService.generatePdf(cert);
+    }
+
+    // ── GET /api/university/certificates/{id}/share-link ──────────────────────
+
+    @GetMapping("/{id}/share-link")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<?> getShareLink(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+
+        Institution institution = institutionRepository.findByUserEmail(user.getEmail())
+                .orElse(null);
+        if (institution == null) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Institution profile not found"));
+        }
+
+        Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
+        if (cert == null || !cert.getInstitutionId().equals(institution.getId())) {
+            return ResponseEntity.status(cert == null ? 404 : 403)
+                    .body(Map.of("success", false,
+                                 "message", cert == null ? "Certificate not found" : "Access denied"));
+        }
+
+        return ResponseEntity.ok(Map.of("success", true, "shareLink", certificateService.buildShareLink(cert)));
+    }
 }
+

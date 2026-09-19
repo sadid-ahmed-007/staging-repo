@@ -232,8 +232,7 @@ export default function AdminCertificates() {
           <ErrorMessage message={error} retry={fetchCertificates} />
         ) : filteredCertificates.length === 0 ? (
           <EmptyState
-            title="No Certificates Found"
-            message={searchQuery || statusFilter !== 'all' ? `No certificates match your search filters.` : `No certificates found in the registry.`}
+            title="No certificates found"
             icon={FileText}
           />
         ) : (
