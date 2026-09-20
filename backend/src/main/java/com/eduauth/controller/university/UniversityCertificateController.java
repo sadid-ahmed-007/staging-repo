@@ -251,5 +251,77 @@ public class UniversityCertificateController {
 
         return ResponseEntity.ok(Map.of("success", true, "shareLink", certificateService.buildShareLink(cert)));
     }
-}
 
+    // ── POST /api/university/certificates/{id}/revoke ─────────────────────────
+
+    @PostMapping("/{id}/revoke")
+    public ResponseEntity<?> revokeCertificate(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+
+        Institution institution = institutionRepository.findByUserEmail(user.getEmail()).orElse(null);
+        if (institution == null) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Institution profile not found"));
+        }
+
+        String reason = body.get("reason") != null ? body.get("reason").toString().trim() : "";
+        if (reason.length() < 10) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "errors", Map.of("reason", "Reason must be at least 10 characters")));
+        }
+
+        try {
+            Certificate cert = certificateService.revokeCertificate(
+                    id, reason, user.getId(), "university", institution.getId());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Certificate revoked successfully",
+                    "data", Map.of(
+                            "id",               cert.getId(),
+                            "serial",           cert.getSerial(),
+                            "status",           "revoked",
+                            "revokedAt",        cert.getRevokedAt(),
+                            "revokedByRole",    cert.getRevokedByRole(),
+                            "revocationReason", cert.getRevocationReason())));
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode())
+                    .body(Map.of("success", false, "message", ex.getReason()));
+        }
+    }
+
+    // ── POST /api/university/certificates/{id}/revalidate ────────────────────
+
+    @PostMapping("/{id}/revalidate")
+    public ResponseEntity<?> revalidateCertificate(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+
+        Institution institution = institutionRepository.findByUserEmail(user.getEmail()).orElse(null);
+        if (institution == null) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Institution profile not found"));
+        }
+
+        String reason = (body != null && body.get("reason") != null)
+                ? body.get("reason").toString().trim() : "";
+
+        try {
+            Certificate cert = certificateService.revalidateCertificate(
+                    id, reason, user.getId(), "university", institution.getId());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Certificate revalidated successfully",
+                    "data", Map.of(
+                            "id",     cert.getId(),
+                            "serial", cert.getSerial(),
+                            "status", "active")));
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode())
+                    .body(Map.of("success", false, "message", ex.getReason()));
+        }
+    }
+}

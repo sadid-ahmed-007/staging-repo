@@ -20,8 +20,18 @@ public class EnrollRequest {
     @JsonAlias({"student_id_in_university", "roll_number", "rollNumber", "student_id", "studentId"})
     private String studentIdInUniversity;
 
-    @NotBlank(message = "Program is required")
+    /**
+     * Free-text program name — required when programId is NOT provided.
+     * When programId is provided, this is auto-resolved from the program hierarchy.
+     */
     private String program;
+
+    /**
+     * Optional program ID from the program structure.
+     * When provided, program/department/expectedGraduationDate are auto-resolved.
+     */
+    @JsonAlias({"program_id", "programId"})
+    private Long programId;
 
     private String department;
     
@@ -43,7 +53,11 @@ public class EnrollRequest {
     @JsonAlias({"enrollment_date"})
     private LocalDate enrollmentDate;
 
-    @NotNull(message = "Expected graduation date is required")
+    /**
+     * Expected graduation date — optional when programId is supplied
+     * (the backend will calculate it from the program's certificate level duration).
+     * If provided, it overrides the calculated date.
+     */
     @JsonAlias({"expected_graduation_date"})
     private LocalDate expectedGraduationDate;
 }

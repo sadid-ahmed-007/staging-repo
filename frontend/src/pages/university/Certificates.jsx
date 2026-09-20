@@ -280,6 +280,7 @@ export default function UniversityCertificates() {
         onDownloadPdf={handleDownloadPdf}
         onPreviewPdf={handlePreviewPdf}
         role="university"
+        onRevoked={() => fetchCertificates()}
       />
     </DashboardLayout>
   );

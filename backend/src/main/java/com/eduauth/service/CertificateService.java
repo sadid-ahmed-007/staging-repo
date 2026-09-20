@@ -1,7 +1,10 @@
 package com.eduauth.service;
 
+import com.eduauth.model.ActivityLog;
 import com.eduauth.model.Certificate;
 import com.eduauth.model.Enrollment;
+import com.eduauth.repository.ActivityLogRepository;
+import com.eduauth.repository.CertificateRepository;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -25,10 +28,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.Map;
@@ -37,6 +43,7 @@ import java.util.Map;
  * Handles certificate-level business logic:
  *  - Share link generation (serial + encrypted DOB)
  *  - PDF certificate generation with QR code (mirrors the Blade template layout)
+ *  - Revoke / revalidate certificates with role-based access control
  */
 @Service
 public class CertificateService {
@@ -49,9 +56,119 @@ public class CertificateService {
     private static final DeviceRgb DARK   = new DeviceRgb(0x33, 0x41, 0x55);
 
     private final EncryptionService encryptionService;
+    private final CertificateRepository certificateRepository;
+    private final ActivityLogRepository activityLogRepository;
 
-    public CertificateService(EncryptionService encryptionService) {
+    public CertificateService(EncryptionService encryptionService,
+                              CertificateRepository certificateRepository,
+                              ActivityLogRepository activityLogRepository) {
         this.encryptionService = encryptionService;
+        this.certificateRepository = certificateRepository;
+        this.activityLogRepository = activityLogRepository;
+    }
+
+    // ── Revocation ────────────────────────────────────────────────────────────
+
+    /**
+     * Revoke a certificate.
+     *
+     * @param certId   certificate ID
+     * @param reason   revocation reason (min 10 chars validated by caller)
+     * @param userId   ID of the user performing the action
+     * @param userRole "university" or "admin"
+     * @param institutionId institution ID — required when userRole="university" for ownership check; ignored for admin
+     * @return the updated Certificate entity
+     */
+    public Certificate revokeCertificate(Long certId, String reason,
+                                          Long userId, String userRole,
+                                          Long institutionId) {
+        Certificate cert = certificateRepository.findById(certId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Certificate not found"));
+
+        if (cert.isRevoked()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Certificate is already revoked");
+        }
+
+        if ("university".equals(userRole)) {
+            if (!cert.getInstitutionId().equals(institutionId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Certificate does not belong to your institution");
+            }
+        }
+        // admin has no ownership restriction
+
+        cert.setRevokedAt(LocalDateTime.now());
+        cert.setRevokedById(userId);
+        cert.setRevokedByRole(userRole);
+        cert.setRevocationReason(reason);
+        certificateRepository.save(cert);
+
+        ActivityLog log = new ActivityLog();
+        log.setUserId(userId);
+        log.setAction("CERTIFICATE_REVOKED");
+        log.setEntityType("Certificate");
+        log.setEntityId(cert.getId());
+        String actor = "admin".equals(userRole) ? "admin" : "university";
+        log.setDescription("Certificate " + cert.getSerial() + " revoked by " + actor + ". Reason: " + reason);
+        activityLogRepository.save(log);
+
+        return cert;
+    }
+
+    /**
+     * Revalidate (un-revoke) a certificate.
+     *
+     * University can only revalidate certificates revoked by themselves.
+     * Admin can revalidate any revoked certificate.
+     *
+     * @param certId   certificate ID
+     * @param reason   revalidation reason (for audit log)
+     * @param userId   ID of the user performing the action
+     * @param userRole "university" or "admin"
+     * @param institutionId institution ID — required when userRole="university"
+     * @return the updated Certificate entity
+     */
+    public Certificate revalidateCertificate(Long certId, String reason,
+                                              Long userId, String userRole,
+                                              Long institutionId) {
+        Certificate cert = certificateRepository.findById(certId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Certificate not found"));
+
+        if (!cert.isRevoked()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Certificate is not revoked");
+        }
+
+        if ("university".equals(userRole)) {
+            if (!cert.getInstitutionId().equals(institutionId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Certificate does not belong to your institution");
+            }
+            if ("admin".equals(cert.getRevokedByRole())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "This certificate was revoked by an admin. Only an admin can revalidate it.");
+            }
+        }
+        // admin has no restriction — can revalidate any cert
+
+        cert.setRevokedAt(null);
+        cert.setRevokedById(null);
+        cert.setRevokedByRole(null);
+        cert.setRevocationReason(null);
+        certificateRepository.save(cert);
+
+        ActivityLog log = new ActivityLog();
+        log.setUserId(userId);
+        log.setAction("CERTIFICATE_REVALIDATED");
+        log.setEntityType("Certificate");
+        log.setEntityId(cert.getId());
+        String actor = "admin".equals(userRole) ? "admin" : "university";
+        log.setDescription("Certificate " + cert.getSerial() + " revalidated by " + actor
+                + (reason != null && !reason.isBlank() ? ". Reason: " + reason : ""));
+        activityLogRepository.save(log);
+
+        return cert;
     }
 
     // ── Share link ────────────────────────────────────────────────────────────

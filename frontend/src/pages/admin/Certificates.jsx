@@ -330,6 +330,7 @@ export default function AdminCertificates() {
         onDownloadPdf={handleDownloadPdf}
         onPreviewPdf={handlePreviewPdf}
         role="admin"
+        onRevoked={() => fetchCertificates()}
       />
 
       <RevocationModal

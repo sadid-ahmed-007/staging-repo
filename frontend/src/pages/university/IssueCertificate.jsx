@@ -266,20 +266,39 @@ function SingleCertificateTab({
   };
 
   // Populate fields when student is chosen
-  const applyStudentDetails = (student) => {
+  const applyStudentDetails = async (student) => {
     if (!student) return;
+    let certName = student.programName || student.certificateName || student.program || '';
+    let certLevel = student.certificateLevelName || student.certificateLevel || '';
+    let dept = student.department || '';
+    let session = student.session || 'Spring 2026';
+    let programId = student.programId || null;
+    let enrollmentId = student.enrollmentId || student.id;
+
+    if ((!certLevel || !certName) && enrollmentId) {
+      try {
+        const res = await api.get(`/university/enrollments/${enrollmentId}`);
+        const enr = res.data?.enrollment || res.data?.data;
+        if (enr) {
+          certName = enr.programName || enr.program || certName;
+          certLevel = enr.certificateLevelName || enr.certificateLevel || certLevel;
+          dept = enr.department || dept;
+          session = enr.batch || session;
+          if (enr.programId) programId = enr.programId;
+        }
+      } catch (_e) {
+        // use available details
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
-      department: student.department || prev.department,
-      major: student.major || prev.major,
-      session: student.session || prev.session || 'Spring 2026',
-      certificateName:
-        prev.certificateName ||
-        (student.program
-          ? student.program
-          : student.department
-          ? `Bachelor of Science in ${student.department}`
-          : 'Bachelor of Science in Computer Science and Engineering'),
+      certificateName: certName,
+      certificateLevel: certLevel,
+      department: dept,
+      major: student.major || prev.major || '',
+      session: session || prev.session || 'Spring 2026',
+      programId: programId || prev.programId,
     }));
   };
 
@@ -315,10 +334,10 @@ function SingleCertificateTab({
       errors.student = 'Please search and select an enrolled student';
     }
     if (!formData.certificateName?.trim()) {
-      errors.certificateName = 'Certificate name is required';
+      errors.certificateName = 'Certificate name is required (select an enrolled student)';
     }
-    if (!formData.certificateLevel) {
-      errors.certificateLevel = 'Certificate level is required';
+    if (!formData.certificateLevel?.trim()) {
+      errors.certificateLevel = 'Certificate level is required from student enrollment';
     }
     if (!formData.session?.trim()) {
       errors.session = 'Academic session is required';
@@ -357,8 +376,9 @@ function SingleCertificateTab({
       const payload = {
         studentId: selectedOption.student.id || selectedOption.student.studentId,
         enrollmentId: selectedOption.student.enrollmentId || null,
+        programId: formData.programId || selectedOption.student.programId || null,
         certificateName: formData.certificateName.trim(),
-        certificateLevel: formData.certificateLevel,
+        certificateLevel: formData.certificateLevel.trim(),
         department: formData.department?.trim() || null,
         major: formData.major?.trim() || null,
         session: formData.session.trim(),
@@ -597,7 +617,7 @@ function SingleCertificateTab({
           </Card>
 
           {/* PART 2 — Certificate Details */}
-          <Card className="space-y-4">
+          <Card className="space-y-5">
             <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand)]">
                 2
@@ -607,42 +627,64 @@ function SingleCertificateTab({
               </h2>
             </div>
 
-            <div className="space-y-4">
-              {/* Certificate Name */}
-              <Input
-                label="Certificate Name"
-                placeholder="Bachelor of Science in Computer Science and Engineering"
-                value={formData.certificateName}
-                onChange={(e) => handleInputChange('certificateName', e.target.value)}
-                error={fieldErrors.certificateName}
-                required
-              />
-
-              {/* Certificate Level & Session */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Auto-filled Academic Program Structure from Enrollment */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 p-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-[var(--border)]/60 pb-3">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                    Certificate Level <span className="text-[var(--danger)]">*</span>
-                  </label>
-                  <select
-                    value={formData.certificateLevel}
-                    onChange={(e) => handleInputChange('certificateLevel', e.target.value)}
-                    className="w-full h-[40px] px-3 rounded-[8px] border border-[var(--border)] bg-[var(--bg-surface)] text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] transition-all"
-                  >
-                    <option value="">Select Level</option>
-                    {certificateLevels.map((lvl) => (
-                      <option key={lvl.value} value={lvl.value}>
-                        {lvl.label}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.certificateLevel && (
-                    <p className="mt-1 text-xs text-[var(--danger)]">
-                      {fieldErrors.certificateLevel}
-                    </p>
-                  )}
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
+                    Certificate Level
+                  </span>
+                  <div className="mt-1">
+                    {formData.certificateLevel ? (
+                      <Badge variant="primary" size="md" className="font-semibold text-xs">
+                        {formData.certificateLevel}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs italic text-[var(--text-muted)]">
+                        Auto-filled when student is selected
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                <div>
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
+                    Department
+                  </span>
+                  <p className="text-sm font-semibold text-[var(--text-primary)] mt-1">
+                    {formData.department || (
+                      <span className="font-normal italic text-[var(--text-muted)] text-xs">
+                        Auto-filled when student is selected
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
+                  Certificate Name
+                </span>
+                <p className="text-base font-bold text-[var(--text-primary)] mt-1">
+                  {formData.certificateName || (
+                    <span className="text-sm font-normal italic text-[var(--text-muted)]">
+                      Auto-filled from student's enrollment program
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2 pt-2.5 border-t border-[var(--border)]/60 text-xs text-[var(--text-secondary)]">
+                <Info className="h-4 w-4 shrink-0 text-[var(--brand)] mt-0.5" />
+                <span>
+                  Certificate details are automatically filled from the student's enrollment program. Contact support if details are incorrect.
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-1">
+              {/* Session & Major */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="Session"
                   placeholder="e.g. Spring 2026"
@@ -651,24 +693,13 @@ function SingleCertificateTab({
                   error={fieldErrors.session}
                   required
                 />
-              </div>
-
-              {/* Department & Major */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Department"
-                  placeholder="e.g. Computer Science and Engineering"
-                  value={formData.department}
-                  onChange={(e) => handleInputChange('department', e.target.value)}
-                  hint="Pre-filled from enrollment if available"
-                />
 
                 <Input
                   label="Major (Optional)"
                   placeholder="e.g. Software Engineering"
                   value={formData.major}
                   onChange={(e) => handleInputChange('major', e.target.value)}
-                  hint="Optional specialization"
+                  hint="Specialization from enrollment"
                 />
               </div>
 
@@ -1115,8 +1146,8 @@ function BatchUploadTab({
           </p>
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Student Status:</strong> Students must have an <strong>approved account</strong> and an <strong>active enrollment</strong> at your institution. Withdrawn, suspended, or unapproved students will be rejected.</li>
-            <li><strong>CGPA &amp; Degree Class:</strong> Either <code>cgpa</code> or <code>degree_class</code> can be empty, but <strong>both cannot be empty</strong> (at least one must be provided).</li>
-            <li><strong>Department &amp; Major:</strong> If left empty, will automatically fall back to the student's enrolled program and major.</li>
+            <li><strong>Automatic Academic Details:</strong> Certificate Name, Certificate Level, and Department are automatically pulled from each student's enrollment program.</li>
+            <li><strong>CGPA &amp; Degree Class:</strong> Either <code>cgpa</code> or <code>degree_class</code> can be empty, but <strong>both cannot be empty</strong> (at least one must be provided per student).</li>
           </ul>
         </div>
 
@@ -1126,8 +1157,6 @@ function BatchUploadTab({
             <thead className="bg-[var(--bg-elevated)] border-b border-[var(--border)] text-[var(--text-secondary)]">
               <tr>
                 <th className="px-3 py-2 font-medium">student_email</th>
-                <th className="px-3 py-2 font-medium">department</th>
-                <th className="px-3 py-2 font-medium">major</th>
                 <th className="px-3 py-2 font-medium">cgpa</th>
                 <th className="px-3 py-2 font-medium">degree_class</th>
               </tr>
@@ -1135,22 +1164,16 @@ function BatchUploadTab({
             <tbody className="divide-y divide-[var(--border)] text-[var(--text-primary)]">
               <tr>
                 <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">student1@example.com</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">Computer Science and Engineering</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">Software Engineering</td>
                 <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">3.75</td>
                 <td className="px-3 py-2 text-[var(--text-secondary)]">First Class</td>
               </tr>
               <tr>
                 <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">student2@example.com</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">Computer Science and Engineering</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">Data Science</td>
                 <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">3.85</td>
                 <td className="px-3 py-2 text-[var(--text-muted)] italic font-mono">&lt;empty&gt;</td>
               </tr>
               <tr>
                 <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">student3@example.com</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">Electrical and Electronic Engineering</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">Power Systems</td>
                 <td className="px-3 py-2 text-[var(--text-muted)] italic font-mono">&lt;empty&gt;</td>
                 <td className="px-3 py-2 text-[var(--text-secondary)]">First Class</td>
               </tr>

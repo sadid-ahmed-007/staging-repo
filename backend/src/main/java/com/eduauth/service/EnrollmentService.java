@@ -35,6 +35,7 @@ public class EnrollmentService {
     private final CertificateLevelRepository certificateLevelRepository;
     private final DepartmentRepository departmentRepository;
     private final MajorRepository majorRepository;
+    private final ProgramRepository programRepository;
     private final NotificationService notificationService;
     private final CertificateRepository certificateRepository;
 
@@ -115,9 +116,34 @@ public class EnrollmentService {
                     });
         }
 
-        // Step 4: Validate dates
+        // Step 4: Resolve program (if programId provided) and validate/calculate dates
         LocalDate enrollDate = request.getEnrollmentDate();
         LocalDate gradDate = request.getExpectedGraduationDate();
+
+        // ── Program resolution ────────────────────────────────────────────────
+        Program resolvedProgram = null;
+        Department resolvedDept = null;
+        CertificateLevel resolvedLevel = null;
+
+        if (request.getProgramId() != null) {
+            resolvedProgram = programRepository.findById(request.getProgramId()).orElse(null);
+            if (resolvedProgram != null) {
+                resolvedDept = departmentRepository.findById(resolvedProgram.getDepartmentId()).orElse(null);
+                if (resolvedDept != null && resolvedDept.getCertificateLevelId() != null) {
+                    resolvedLevel = certificateLevelRepository.findById(resolvedDept.getCertificateLevelId()).orElse(null);
+                }
+            }
+        }
+
+        // Auto-calculate graduation date from program duration if not explicitly provided
+        if (gradDate == null) {
+            if (resolvedLevel != null && resolvedLevel.getDurationYears() != null) {
+                gradDate = enrollDate.plusYears(resolvedLevel.getDurationYears());
+            } else {
+                throw new BadRequestException(
+                        "Expected graduation date is required when no programId is provided.");
+            }
+        }
 
         if (enrollDate.isAfter(LocalDate.now())) {
             throw new BadRequestException("Enrollment date cannot be in the future.");
@@ -133,24 +159,30 @@ public class EnrollmentService {
         String enrollmentNumber = generateEnrollmentNumber(institution);
 
         // Step 6: Create enrollment record
-        String departmentName = request.getDepartment();
-        if (request.getDepartmentId() != null) {
+        // If programId is provided, auto-derive names from the program hierarchy
+        String programName  = resolvedProgram != null ? resolvedProgram.getName()  : request.getProgram();
+        String departmentName = resolvedDept  != null ? resolvedDept.getName()     : request.getDepartment();
+        String majorName    = request.getMajor();
+
+        // Fall back to departmentId/majorId lookup for legacy text fields
+        if (departmentName == null && request.getDepartmentId() != null) {
             departmentName = departmentRepository.findById(request.getDepartmentId())
-                    .map(Department::getName).orElse(departmentName);
+                    .map(Department::getName).orElse(null);
+        }
+        if (majorName == null && request.getMajorId() != null) {
+            majorName = majorRepository.findById(request.getMajorId())
+                    .map(Major::getName).orElse(null);
         }
 
-        String majorName = request.getMajor();
-        if (request.getMajorId() != null) {
-            majorName = majorRepository.findById(request.getMajorId())
-                    .map(Major::getName).orElse(majorName);
-        }
+        // Determine IDs to store
+        Long certLevelId = resolvedLevel  != null ? resolvedLevel.getId()  : request.getCertificateLevelId();
+        Long deptId      = resolvedDept   != null ? resolvedDept.getId()   : request.getDepartmentId();
+        Long majorId     = request.getMajorId();
+        Long programId   = resolvedProgram != null ? resolvedProgram.getId() : null;
 
         // Encode program, department, major into single program column
         // Format: "program||department||major" (department and major may be empty)
-        String encodedProgram = encodeProgram(
-                request.getProgram(),
-                departmentName,
-                majorName);
+        String encodedProgram = encodeProgram(programName, departmentName, majorName);
 
         Enrollment enrollment = new Enrollment();
         enrollment.setEnrollmentNumber(enrollmentNumber);
@@ -163,9 +195,10 @@ public class EnrollmentService {
         enrollment.setEnrollmentDate(enrollDate);
         enrollment.setExpectedGraduationDate(gradDate);
         enrollment.setEnrolledBy(enrolledByUserId);
-        enrollment.setCertificateLevelId(request.getCertificateLevelId());
-        enrollment.setDepartmentId(request.getDepartmentId());
-        enrollment.setMajorId(request.getMajorId());
+        enrollment.setCertificateLevelId(certLevelId);
+        enrollment.setDepartmentId(deptId);
+        enrollment.setMajorId(majorId);
+        enrollment.setProgramId(programId);
 
         enrollment = enrollmentRepository.save(enrollment);
 
@@ -270,12 +303,15 @@ public class EnrollmentService {
 
         Institution institution = institutionRepository.findById(institutionId).orElse(null);
         User studentUser = getStudentUser(enrollment.getStudentId());
+
+        // For the university detail view, fetch any withdrawal request (pending, approved, or rejected)
         WithdrawalRequest wr = withdrawalRequestRepository
-                .findFirstByEnrollmentIdAndStatusOrderByCreatedAtDesc(id, "pending")
+                .findFirstByEnrollmentIdOrderByCreatedAtDesc(id)
                 .orElse(null);
 
         EnrollmentResponse resp = toResponse(enrollment, studentUser, institution, wr);
-        if (wr != null && "active".equals(enrollment.getStatus())) {
+        // Synthesise the withdrawal_requested virtual status when pending WR exists
+        if (wr != null && "pending".equals(wr.getStatus()) && "active".equals(enrollment.getStatus())) {
             resp.setStatus("withdrawal_requested");
         }
         return resp;
@@ -810,6 +846,31 @@ public class EnrollmentService {
             String department = programParts[1];
             String major = programParts[2];
 
+            String certLevelName = null;
+            if (e.getCertificateLevelId() != null) {
+                certLevelName = certificateLevelRepository.findById(e.getCertificateLevelId())
+                        .map(CertificateLevel::getName).orElse(null);
+            }
+
+            if (e.getProgramId() != null) {
+                Program p = programRepository.findById(e.getProgramId()).orElse(null);
+                if (p != null) {
+                    program = p.getName();
+                    if ((department == null || department.isBlank()) && p.getDepartmentId() != null) {
+                        Department d = departmentRepository.findById(p.getDepartmentId()).orElse(null);
+                        if (d != null) {
+                            department = d.getName();
+                            if (certLevelName == null && d.getCertificateLevelId() != null) {
+                                certLevelName = certificateLevelRepository.findById(d.getCertificateLevelId())
+                                        .map(CertificateLevel::getName).orElse(null);
+                            }
+                        }
+                    }
+                }
+            } else if (e.getDepartmentId() != null && (department == null || department.isBlank())) {
+                department = departmentRepository.findById(e.getDepartmentId()).map(Department::getName).orElse("");
+            }
+
             Map<String, Object> enrollmentInfo = new java.util.LinkedHashMap<>();
             enrollmentInfo.put("id", e.getId());
             enrollmentInfo.put("enrollmentNumber", e.getEnrollmentNumber());
@@ -817,6 +878,10 @@ public class EnrollmentService {
             enrollmentInfo.put("rollNumber", e.getRollNumber());
             enrollmentInfo.put("roll_number", e.getRollNumber());
             enrollmentInfo.put("program", program);
+            enrollmentInfo.put("programName", program);
+            enrollmentInfo.put("certificateName", program);
+            enrollmentInfo.put("certificateLevel", certLevelName);
+            enrollmentInfo.put("certificateLevelName", certLevelName);
             enrollmentInfo.put("department", department);
             enrollmentInfo.put("major", major);
             enrollmentInfo.put("status", e.getStatus());
@@ -836,6 +901,10 @@ public class EnrollmentService {
             row.put("roll_number", e.getRollNumber());
             row.put("studentIdInUniversity", e.getRollNumber());
             row.put("program", program);
+            row.put("programName", program);
+            row.put("certificateName", program);
+            row.put("certificateLevel", certLevelName);
+            row.put("certificateLevelName", certLevelName);
             row.put("department", department);
             row.put("major", major);
             row.put("session", e.getBatch());
@@ -843,6 +912,9 @@ public class EnrollmentService {
             row.put("expectedGraduationDate", e.getExpectedGraduationDate());
             row.put("expected_graduation_date", e.getExpectedGraduationDate());
             row.put("enrollmentId", e.getId());
+            row.put("programId", e.getProgramId());
+            row.put("certificateLevelId", e.getCertificateLevelId());
+            row.put("departmentId", e.getDepartmentId());
             row.put("enrollments", List.of(enrollmentInfo));
 
             return row;
@@ -967,6 +1039,7 @@ public class EnrollmentService {
                 .certificateLevelId(e.getCertificateLevelId())
                 .departmentId(e.getDepartmentId())
                 .majorId(e.getMajorId())
+                .programId(e.getProgramId())
                 .batch(e.getBatch())
                 .status(e.getStatus())
                 .enrollmentDate(e.getEnrollmentDate())
@@ -975,9 +1048,28 @@ public class EnrollmentService {
                 .institutionName(institution != null ? institution.getName() : null)
                 .createdAt(e.getCreatedAt());
 
+        // Populate programName / programShortName from the programs table if programId is set
+        if (e.getProgramId() != null) {
+            programRepository.findById(e.getProgramId()).ifPresent(p -> {
+                builder.programName(p.getName());
+                builder.programShortName(p.getShortName());
+            });
+        }
+
         if (wr != null) {
             builder.withdrawalReason(wr.getReason())
                    .withdrawalRequestedAt(wr.getCreatedAt());
+
+            // Build the full WithdrawalRequestInfo for the university view
+            WithdrawalRequestInfo wrInfo = WithdrawalRequestInfo.builder()
+                    .requestedBy("student")        // WR records are always student-initiated
+                    .reason(wr.getReason())
+                    .requestedAt(wr.getCreatedAt())
+                    .responseMessage(wr.getRejectionNote())
+                    .respondedAt(wr.getReviewedAt())
+                    .status(wr.getStatus())
+                    .build();
+            builder.withdrawalRequest(wrInfo);
         }
 
         if ("graduated".equals(e.getStatus())) {

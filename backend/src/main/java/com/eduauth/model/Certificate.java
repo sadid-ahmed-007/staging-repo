@@ -61,6 +61,10 @@ public class Certificate {
     @Column(name = "major")
     private String major;
 
+    /** FK to programs table — populated when certificate is issued using the program structure */
+    @Column(name = "program_id")
+    private Long programId;
+
     @Column(name = "session")
     private String session;
 

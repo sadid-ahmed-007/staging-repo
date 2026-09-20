@@ -4,10 +4,15 @@ import com.eduauth.dto.dashboard.*;
 import com.eduauth.model.*;
 import com.eduauth.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +27,8 @@ public class DashboardService {
     private final VerificationLogRepository verificationLogRepository;
     private final UserRepository userRepository;
     private final InstitutionRepository institutionRepository;
+    private final CertificateLevelRepository certificateLevelRepository;
+    private final ActivityLogRepository activityLogRepository;
 
     public StudentDashboardDto getStudentDashboardStats(User user) {
         StudentDashboardDto dto = new StudentDashboardDto();
@@ -75,8 +82,60 @@ public class DashboardService {
         LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
         LocalDate endOfMonth = LocalDate.now().plusMonths(1).withDayOfMonth(1).minusDays(1);
         dto.setThisMonthCertificates(certificateRepository.countByInstitutionIdAndIssueDateBetween(institutionId, startOfMonth, endOfMonth));
+
+        // Program Overview Breakdown
+        List<CertificateLevel> levels = certificateLevelRepository.findByInstitutionIdAndIsActiveTrue(institutionId);
+        List<Enrollment> enrollments = enrollmentRepository.findByInstitutionIdAndStatus(institutionId, "active");
+        List<Certificate> certificates = certificateRepository.findByInstitutionId(institutionId);
+
+        List<UniversityDashboardDto.ProgramBreakdownDto> breakdown = new java.util.ArrayList<>();
+        for (CertificateLevel lvl : levels) {
+            String shortName = lvl.getShortCode() != null ? lvl.getShortCode() : lvl.getName();
+            String fullName = lvl.getName();
+            String prefix = lvl.getSerialPrefix() != null ? lvl.getSerialPrefix().toUpperCase() : "";
+
+            long activeCount = enrollments.stream().filter(e -> {
+                if (e.getCertificateLevelId() != null && e.getCertificateLevelId().equals(lvl.getId())) {
+                    return true;
+                }
+                String prog = e.getProgram() != null ? e.getProgram().toLowerCase() : "";
+                return prog.contains(shortName.toLowerCase()) || prog.contains(fullName.toLowerCase());
+            }).count();
+
+            long certCount = certificates.stream().filter(c -> {
+                String certLvl = c.getCertificateLevel() != null ? c.getCertificateLevel().toLowerCase() : "";
+                String serial = c.getSerial() != null ? c.getSerial().toUpperCase() : "";
+                if (!prefix.isEmpty() && serial.startsWith(prefix)) {
+                    return true;
+                }
+                return certLvl.equalsIgnoreCase(shortName) || certLvl.equalsIgnoreCase(fullName) || certLvl.contains(shortName.toLowerCase());
+            }).count();
+
+            breakdown.add(UniversityDashboardDto.ProgramBreakdownDto.builder()
+                    .levelName(fullName)
+                    .shortName(shortName)
+                    .activeStudents(activeCount)
+                    .certsIssued(certCount)
+                    .build());
+        }
+        dto.setProgramBreakdown(breakdown);
         
         return dto;
+    }
+
+    public List<Map<String, Object>> getUniversityRecentActivity(User user) {
+        Page<ActivityLog> paged = activityLogRepository.findByUserIdOrderByCreatedAtDesc(
+                user.getId(), PageRequest.of(0, 10));
+
+        return paged.getContent().stream().map(log -> {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("id", log.getId());
+            map.put("action", log.getAction());
+            map.put("description", log.getDescription());
+            map.put("createdAt", log.getCreatedAt());
+            map.put("created_at", log.getCreatedAt());
+            return map;
+        }).collect(Collectors.toList());
     }
 
     public VerifierDashboardDto getVerifierDashboardStats(User user) {

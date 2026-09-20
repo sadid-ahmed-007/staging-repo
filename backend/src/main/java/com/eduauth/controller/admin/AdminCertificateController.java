@@ -1,9 +1,7 @@
 package com.eduauth.controller.admin;
 
-import com.eduauth.model.ActivityLog;
 import com.eduauth.model.Certificate;
 import com.eduauth.model.User;
-import com.eduauth.repository.ActivityLogRepository;
 import com.eduauth.repository.CertificateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,7 +13,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +25,6 @@ import java.util.stream.Collectors;
 public class AdminCertificateController {
 
         private final CertificateRepository certificateRepository;
-        private final ActivityLogRepository activityLogRepository;
         private final com.eduauth.service.CertificateService certificateService;
 
         // ── GET /api/admin/certificates ───────────────────────────────────────────
@@ -184,16 +180,6 @@ public class AdminCertificateController {
                         @PathVariable Long id,
                         @RequestBody Map<String, Object> body) {
 
-                Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
-                if (cert == null) {
-                        return ResponseEntity.status(404)
-                                        .body(Map.of("success", false, "message", "Certificate not found"));
-                }
-                if (cert.isRevoked()) {
-                        return ResponseEntity.status(422)
-                                        .body(Map.of("success", false, "message", "Certificate is already revoked"));
-                }
-
                 String reason = body.get("reason") != null ? body.get("reason").toString().trim() : "";
                 if (reason.length() < 10) {
                         return ResponseEntity.badRequest().body(Map.of(
@@ -201,33 +187,27 @@ public class AdminCertificateController {
                                         "errors", Map.of("reason", "Reason must be at least 10 characters")));
                 }
 
-                cert.setRevokedAt(LocalDateTime.now());
-                cert.setRevokedById(user.getId());
-                cert.setRevokedByRole("admin");
-                cert.setRevocationReason(reason);
-                certificateRepository.save(cert);
-
-                // Log activity
-                ActivityLog log = new ActivityLog();
-                log.setUserId(user.getId());
-                log.setAction("CERTIFICATE_REVOKED");
-                log.setEntityType("Certificate");
-                log.setEntityId(cert.getId());
-                log.setDescription("Certificate " + cert.getSerial() + " revoked by admin. Reason: " + reason);
-                activityLogRepository.save(log);
-
-                return ResponseEntity.ok(Map.of(
-                                "success", true,
-                                "message", "Certificate revoked successfully",
-                                "data", Map.of(
-                                                "id", cert.getId(),
-                                                "serial", cert.getSerial(),
-                                                "status", "revoked",
-                                                "revokedAt", cert.getRevokedAt(),
-                                                "revocationReason", cert.getRevocationReason())));
+                try {
+                        Certificate cert = certificateService.revokeCertificate(
+                                        id, reason, user.getId(), "admin", null);
+                        return ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "message", "Certificate revoked successfully",
+                                        "data", Map.of(
+                                                        "id",               cert.getId(),
+                                                        "serial",           cert.getSerial(),
+                                                        "status",           "revoked",
+                                                        "revokedAt",        cert.getRevokedAt(),
+                                                        "revokedByRole",    cert.getRevokedByRole(),
+                                                        "revocationReason", cert.getRevocationReason())));
+                } catch (org.springframework.web.server.ResponseStatusException ex) {
+                        return ResponseEntity.status(ex.getStatusCode())
+                                        .body(Map.of("success", false, "message", ex.getReason()));
+                }
         }
 
-        // ── POST /api/admin/certificates/{id}/restore ─────────────────────────────
+        // ── POST /api/admin/certificates/{id}/restore (legacy) ───────────────────
+        // Kept for backwards compat — delegates to revalidateCertificate
 
         @PostMapping("/{id}/restore")
         public ResponseEntity<?> restoreCertificate(
@@ -235,42 +215,50 @@ public class AdminCertificateController {
                         @PathVariable Long id,
                         @RequestBody(required = false) Map<String, Object> body) {
 
-                Certificate cert = certificateRepository.findByIdWithDetails(id).orElse(null);
-                if (cert == null) {
-                        return ResponseEntity.status(404)
-                                        .body(Map.of("success", false, "message", "Certificate not found"));
-                }
-                if (!cert.isRevoked()) {
-                        return ResponseEntity.status(422)
-                                        .body(Map.of("success", false, "message", "Certificate is not revoked"));
-                }
-
-                // Optional reason for audit
                 String reason = (body != null && body.get("reason") != null)
-                                ? body.get("reason").toString().trim()
-                                : "Restored by admin";
+                                ? body.get("reason").toString().trim() : "Restored by admin";
 
-                cert.setRevokedAt(null);
-                cert.setRevokedById(null);
-                cert.setRevokedByRole(null);
-                cert.setRevocationReason(null);
-                certificateRepository.save(cert);
+                try {
+                        Certificate cert = certificateService.revalidateCertificate(
+                                        id, reason, user.getId(), "admin", null);
+                        return ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "message", "Certificate restored successfully",
+                                        "data", Map.of(
+                                                        "id",     cert.getId(),
+                                                        "serial", cert.getSerial(),
+                                                        "status", "active")));
+                } catch (org.springframework.web.server.ResponseStatusException ex) {
+                        return ResponseEntity.status(ex.getStatusCode())
+                                        .body(Map.of("success", false, "message", ex.getReason()));
+                }
+        }
 
-                // Log activity
-                ActivityLog log = new ActivityLog();
-                log.setUserId(user.getId());
-                log.setAction("CERTIFICATE_RESTORED");
-                log.setEntityType("Certificate");
-                log.setEntityId(cert.getId());
-                log.setDescription("Certificate " + cert.getSerial() + " restored by admin. Reason: " + reason);
-                activityLogRepository.save(log);
+        // ── POST /api/admin/certificates/{id}/revalidate ─────────────────────────
 
-                return ResponseEntity.ok(Map.of(
-                                "success", true,
-                                "message", "Certificate restored successfully",
-                                "data", Map.of(
-                                                "id", cert.getId(),
-                                                "serial", cert.getSerial(),
-                                                "status", "active")));
+        @PostMapping("/{id}/revalidate")
+        public ResponseEntity<?> revalidateCertificate(
+                        @AuthenticationPrincipal User user,
+                        @PathVariable Long id,
+                        @RequestBody(required = false) Map<String, Object> body) {
+
+                String reason = (body != null && body.get("reason") != null)
+                                ? body.get("reason").toString().trim() : "";
+
+                try {
+                        Certificate cert = certificateService.revalidateCertificate(
+                                        id, reason, user.getId(), "admin", null);
+                        return ResponseEntity.ok(Map.of(
+                                        "success", true,
+                                        "message", "Certificate revalidated successfully",
+                                        "data", Map.of(
+                                                        "id",     cert.getId(),
+                                                        "serial", cert.getSerial(),
+                                                        "status", "active")));
+                } catch (org.springframework.web.server.ResponseStatusException ex) {
+                        return ResponseEntity.status(ex.getStatusCode())
+                                        .body(Map.of("success", false, "message", ex.getReason()));
+                }
         }
 }
+

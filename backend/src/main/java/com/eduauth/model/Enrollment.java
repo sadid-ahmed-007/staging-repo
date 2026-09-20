@@ -44,6 +44,10 @@ public class Enrollment {
     @Column(name = "major_id")
     private Long majorId;
 
+    /** FK to programs table — set on new enrollments when a program is selected from the program structure */
+    @Column(name = "program_id")
+    private Long programId;
+
     @Column(name = "certificate_level_id")
     private Long certificateLevelId;
 

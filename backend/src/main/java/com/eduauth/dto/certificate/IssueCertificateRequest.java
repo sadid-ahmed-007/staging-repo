@@ -22,6 +22,15 @@ public class IssueCertificateRequest {
     @JsonAlias({"enrollment_id", "enrollmentId"})
     private Long enrollmentId;
 
+    /**
+     * Optional program ID from the academic program structure.
+     * When provided, certificateName, department, and certificateLevel are auto-resolved
+     * from the program hierarchy (Program → Department → CertificateLevel).
+     * Explicit values in this request will override the auto-resolved values.
+     */
+    @JsonAlias({"program_id", "programId"})
+    private Long programId;
+
     /** Human-readable certificate name, e.g. "Bachelor of Science in Computer Science" */
     @NotBlank(message = "certificateName is required")
     @JsonAlias({"certificate_name", "certificateName"})

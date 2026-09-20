@@ -6,6 +6,7 @@ import com.eduauth.model.*;
 import com.eduauth.repository.*;
 import com.eduauth.service.EnrollmentService;
 import com.eduauth.service.NotificationService;
+import com.eduauth.service.ProgramService;
 import com.eduauth.service.SerialGeneratorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,9 @@ public class UniversityCertificateIssuanceController {
     private final EnrollmentService       enrollmentService;
     private final SerialGeneratorService  serialGeneratorService;
     private final NotificationService     notificationService;
+    private final ProgramService          programService;
+    private final DepartmentRepository    departmentRepository;
+    private final CertificateLevelRepository certificateLevelRepository;
 
     // ── POST /api/university/certificates ────────────────────────────────────
 
@@ -126,27 +130,50 @@ public class UniversityCertificateIssuanceController {
                             "message", "Either CGPA or Degree Class is required before issuing a certificate."));
         }
 
-        // 5. Resolve defaults from enrollment when request fields are blank
-        String level = (req.getCertificateLevel() != null && !req.getCertificateLevel().isBlank())
-                ? req.getCertificateLevel() : enrollment.getProgram();
+        // 5. Resolve fields — programId takes priority over explicit text fields
+        String level    = null;
+        String certName = null;
+        String dept     = null;
+        Long   programId = req.getProgramId() != null ? req.getProgramId()
+                          : (enrollment.getProgramId() != null ? enrollment.getProgramId() : null);
 
-        String certName = (req.getCertificateName() != null && !req.getCertificateName().isBlank())
-                ? req.getCertificateName() : level;
+        if (programId != null) {
+            try {
+                ProgramService.ProgramHierarchy hierarchy = programService.resolveProgramHierarchy(programId);
+                // Auto-populate from program hierarchy (explicit request values override)
+                certName = hierarchy.program().getName();
+                dept     = hierarchy.department().getName();
+                level    = hierarchy.certificateLevel() != null
+                        ? hierarchy.certificateLevel().getName() : null;
+            } catch (Exception ignored) {
+                // If program hierarchy resolution fails, fall through to manual values
+                programId = null;
+            }
+        }
 
-        String dept = (req.getDepartment() != null && !req.getDepartment().isBlank())
-                ? req.getDepartment() : enrollment.getProgram();
+        // Explicit request fields override auto-resolved values
+        if (req.getCertificateLevel() != null && !req.getCertificateLevel().isBlank()) {
+            level = req.getCertificateLevel();
+        }
+        if (req.getCertificateName() != null && !req.getCertificateName().isBlank()) {
+            certName = req.getCertificateName();
+        }
+        if (req.getDepartment() != null && !req.getDepartment().isBlank()) {
+            dept = req.getDepartment();
+        }
 
-        String session = (req.getSession() != null && !req.getSession().isBlank())
+        // Final fallbacks to enrollment data if still null
+        if (level    == null) level    = enrollment.getProgram();
+        if (certName == null) certName = level;
+        if (dept     == null) dept     = enrollment.getProgram();
+
+        String session    = (req.getSession() != null && !req.getSession().isBlank())
                 ? req.getSession() : enrollment.getBatch();
-
         LocalDate issueDate = req.getIssueDate() != null ? req.getIssueDate() : LocalDate.now();
-
-        String authName = (req.getAuthorityName() != null && !req.getAuthorityName().isBlank())
+        String authName  = (req.getAuthorityName() != null && !req.getAuthorityName().isBlank())
                 ? req.getAuthorityName() : institution.getName();
-
         String authTitle = (req.getAuthorityTitle() != null && !req.getAuthorityTitle().isBlank())
                 ? req.getAuthorityTitle() : "Registrar";
-
         String issuedName = (req.getIssuedName() != null && !req.getIssuedName().isBlank())
                 ? req.getIssuedName() : buildFullName(student);
 
@@ -164,6 +191,7 @@ public class UniversityCertificateIssuanceController {
         cert.setCertificateName(certName);
         cert.setDepartment(dept);
         cert.setMajor(req.getMajor() != null ? req.getMajor() : null);
+        cert.setProgramId(programId);
         cert.setSession(session);
         cert.setCgpa(req.getCgpa());
         cert.setDegreeClass(req.getDegreeClass());
@@ -437,10 +465,10 @@ public class UniversityCertificateIssuanceController {
      */
     @GetMapping("/batch-template")
     public ResponseEntity<byte[]> downloadBatchTemplate() {
-        String csv = "student_email,department,major,cgpa,degree_class\n"
-                   + "student1@example.com,Computer Science and Engineering,Software Engineering,3.75,First Class\n"
-                   + "student2@example.com,Computer Science and Engineering,Data Science,3.85,\n"
-                   + "student3@example.com,Electrical and Electronic Engineering,Power Systems,,First Class\n";
+        String csv = "student_email,cgpa,degree_class\n"
+                   + "student1@example.com,3.75,First Class\n"
+                   + "student2@example.com,3.85,\n"
+                   + "student3@example.com,,First Class\n";
 
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
@@ -481,7 +509,27 @@ public class UniversityCertificateIssuanceController {
             String authorityName,
             String authorityTitle) {
 
-        String serial    = serialGeneratorService.generate(certificateLevel);
+        String finalCertName = certificateName;
+        String finalLevel = certificateLevel;
+        String finalDept = department;
+        Long programId = enrollment.getProgramId();
+
+        if (programId != null) {
+            try {
+                ProgramService.ProgramHierarchy hierarchy = programService.resolveProgramHierarchy(programId);
+                if (finalCertName == null || finalCertName.isBlank()) {
+                    finalCertName = hierarchy.program().getName();
+                }
+                if (finalDept == null || finalDept.isBlank()) {
+                    finalDept = hierarchy.department().getName();
+                }
+                if (finalLevel == null || finalLevel.isBlank()) {
+                    finalLevel = hierarchy.certificateLevel() != null ? hierarchy.certificateLevel().getName() : null;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        String serial = serialGeneratorService.generate(finalLevel != null ? finalLevel : certificateLevel);
         String issuedName = buildFullName(student);
 
         Certificate cert = new Certificate();
@@ -490,10 +538,11 @@ public class UniversityCertificateIssuanceController {
         cert.setEnrollmentId(enrollment.getId());
         cert.setIssuedByUserId(issuedByUser.getId());
         cert.setSerial(serial);
-        cert.setCertificateLevel(certificateLevel);
-        cert.setCertificateName(certificateName);
-        cert.setDepartment(department);
+        cert.setCertificateLevel(finalLevel != null ? finalLevel : certificateLevel);
+        cert.setCertificateName(finalCertName != null ? finalCertName : certificateName);
+        cert.setDepartment(finalDept != null ? finalDept : department);
         cert.setMajor(major);
+        cert.setProgramId(programId);
         cert.setSession(session);
         cert.setCgpa(cgpa);
         cert.setDegreeClass(degreeClass);

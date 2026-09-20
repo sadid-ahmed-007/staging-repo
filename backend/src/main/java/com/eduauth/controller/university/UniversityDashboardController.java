@@ -25,4 +25,16 @@ public class UniversityDashboardController {
         UniversityDashboardDto stats = dashboardService.getUniversityDashboardStats(user);
         return ResponseEntity.ok(Map.of("success", true, "data", stats));
     }
+
+    @GetMapping("/activity")
+    @PreAuthorize("hasRole('UNIVERSITY')")
+    public ResponseEntity<?> getRecentActivity(@AuthenticationPrincipal User user) {
+        var activities = dashboardService.getUniversityRecentActivity(user);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "activities", activities,
+                "activity", activities,
+                "data", activities
+        ));
+    }
 }

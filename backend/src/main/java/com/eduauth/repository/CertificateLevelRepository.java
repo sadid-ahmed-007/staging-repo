@@ -9,6 +9,14 @@ import java.util.Optional;
 
 @Repository
 public interface CertificateLevelRepository extends JpaRepository<CertificateLevel, Long> {
+
     List<CertificateLevel> findByInstitutionId(Long institutionId);
+
+    List<CertificateLevel> findByInstitutionIdOrderByNameAsc(Long institutionId);
+
+    List<CertificateLevel> findByInstitutionIdAndIsActiveTrue(Long institutionId);
+
+    List<CertificateLevel> findByInstitutionIdAndIsActiveTrueOrderByNameAsc(Long institutionId);
+
     Optional<CertificateLevel> findByIdAndInstitutionId(Long id, Long institutionId);
 }

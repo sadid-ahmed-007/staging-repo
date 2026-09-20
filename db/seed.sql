@@ -20,6 +20,7 @@ TRUNCATE TABLE certificate_access_requests;
 TRUNCATE TABLE certificates;
 TRUNCATE TABLE certificate_sequences;
 TRUNCATE TABLE enrollments;
+TRUNCATE TABLE programs;
 TRUNCATE TABLE certificate_levels;
 TRUNCATE TABLE majors;
 TRUNCATE TABLE departments;
@@ -86,29 +87,38 @@ INSERT INTO verifiers (id, user_id, company_name, contact_person, designation, e
 (4, 16, 'BDJobs',            'Verification Dept','Compliance Officer','pending.verifier@bdjobs.com','+8801900000004', 'Platform credential validation',                     'Dhaka, Bangladesh', 'https://bdjobs.com',          NOW(), NOW());
 
 -- CERTIFICATE LEVELS
-INSERT INTO certificate_levels (id, institution_id, name, short_code, is_active, created_at, updated_at) VALUES
-(1, 1, 'Bachelor of Science',                   'BSc',   1, NOW(), NOW()),
-(2, 1, 'Bachelor of Commerce',                  'BCom',  1, NOW(), NOW()),
-(3, 1, 'Bachelor of Arts',                      'BA',    1, NOW(), NOW()),
-(4, 1, 'Master of Business Administration',     'MBA',   1, NOW(), NOW()),
-(5, 1, 'Master of Science',                     'MSc',   1, NOW(), NOW()),
-(6, 1, 'Doctor of Philosophy',                  'PhD',   1, NOW(), NOW()),
-(7, 2, 'Bachelor of Science',                   'BSc',   1, NOW(), NOW()),
-(8, 2, 'Bachelor of Architecture',              'BArch', 1, NOW(), NOW()),
-(9, 2, 'Bachelor of Business Administration',   'BBA',   1, NOW(), NOW()),
-(10,3, 'Bachelor of Science',                   'BSc',   1, NOW(), NOW()),
-(11,4, 'Bachelor of Arts',                      'BA',    1, NOW(), NOW());
+INSERT INTO certificate_levels (id, institution_id, name, short_code, serial_prefix, duration_years, is_active, created_at, updated_at) VALUES
+(1, 1, 'Bachelor of Science',                   'BSc',   'BSC',   4, 1, NOW(), NOW()),
+(2, 1, 'Bachelor of Commerce',                  'BCom',  'BCOM',  4, 1, NOW(), NOW()),
+(3, 1, 'Bachelor of Arts',                      'BA',    'BA',    4, 1, NOW(), NOW()),
+(4, 1, 'Master of Business Administration',     'MBA',   'MBA',   2, 1, NOW(), NOW()),
+(5, 1, 'Master of Science',                     'MSc',   'MSC',   2, 1, NOW(), NOW()),
+(6, 1, 'Doctor of Philosophy',                  'PhD',   'PHD',   4, 1, NOW(), NOW()),
+(7, 2, 'Bachelor of Science',                   'BSc',   'BSC',   4, 1, NOW(), NOW()),
+(8, 2, 'Bachelor of Architecture',              'BArch', 'BARCH', 5, 1, NOW(), NOW()),
+(9, 2, 'Bachelor of Business Administration',   'BBA',   'BBA',   4, 1, NOW(), NOW()),
+(10,3, 'Bachelor of Science',                   'BSc',   'BSC',   4, 1, NOW(), NOW()),
+(11,4, 'Bachelor of Arts',                      'BA',    'BA',    4, 1, NOW(), NOW());
 
 -- DEPARTMENTS
-INSERT INTO departments (id, institution_id, certificate_level_id, name, short_code, is_active, created_at, updated_at) VALUES
-(1, 1, 1, 'Computer Science and Engineering',        'CSE', 1, NOW(), NOW()),
-(2, 1, 1, 'Electrical and Electronic Engineering',   'EEE', 1, NOW(), NOW()),
-(3, 1, 4, 'Business Administration',                 'BBA', 1, NOW(), NOW()),
-(4, 2, 7, 'Electrical and Computer Engineering',     'ECE', 1, NOW(), NOW()),
-(5, 2, 8, 'Architecture',                            'ARCH',1, NOW(), NOW()),
-(6, 2, 9, 'Business Administration',                 'BBA', 1, NOW(), NOW()),
-(7, 3, 10,'Computer Science',                        'CS',  1, NOW(), NOW()),
-(8, 4, 11,'English',                                 'ENG', 1, NOW(), NOW());
+INSERT INTO departments (id, institution_id, certificate_level_id, name, short_code, code, is_active, created_at, updated_at) VALUES
+(1, 1, 1, 'Computer Science and Engineering',        'CSE',  'CSE',  1, NOW(), NOW()),
+(2, 1, 1, 'Electrical and Electronic Engineering',   'EEE',  'EEE',  1, NOW(), NOW()),
+(3, 1, 4, 'Business Administration',                 'BBA',  'BBA',  1, NOW(), NOW()),
+(4, 2, 7, 'Electrical and Computer Engineering',     'ECE',  'ECE',  1, NOW(), NOW()),
+(5, 2, 8, 'Architecture',                            'ARCH', 'ARCH', 1, NOW(), NOW()),
+(6, 2, 9, 'Business Administration',                 'BBA',  'BBA',  1, NOW(), NOW()),
+(7, 3, 10,'Computer Science',                        'CS',   'CS',   1, NOW(), NOW()),
+(8, 4, 11,'English',                                 'ENG',  'ENG',  1, NOW(), NOW());
+
+-- PROGRAMS
+INSERT INTO programs (id, department_id, university_id, name, short_name, is_active, created_at, updated_at) VALUES
+(1, 1, 1, 'Bachelor of Science in Computer Science and Engineering',        'BSc in CSE', 1, NOW(), NOW()),
+(2, 1, 1, 'Bachelor of Science in Software Engineering',                    'BSc in SE',  1, NOW(), NOW()),
+(3, 2, 1, 'Bachelor of Science in Electrical and Electronics Engineering', 'BSc in EEE', 1, NOW(), NOW()),
+(4, 3, 1, 'Master of Business Administration',                              'MBA',        1, NOW(), NOW()),
+(5, 1, 1, 'Master of Science in Computer Science and Engineering',          'MSc in CSE', 1, NOW(), NOW()),
+(6, 1, 1, 'Doctor of Philosophy in Computer Science and Engineering',       'PhD in CSE', 1, NOW(), NOW());
 
 -- MAJORS
 INSERT INTO majors (id, department_id, name, is_active, created_at, updated_at) VALUES
@@ -128,20 +138,20 @@ INSERT INTO majors (id, department_id, name, is_active, created_at, updated_at) 
 (14, 8, 'English Literature',      1, NOW(), NOW());
 
 -- ENROLLMENTS
-INSERT INTO enrollments (id, enrollment_number, student_id, institution_id, roll_number, department_id, major_id, program, batch, status, suspension_reason, enrollment_date, expected_graduation_date, actual_graduation_date, enrolled_by, certificate_level_id, created_at, updated_at) VALUES
-(1, 'UIU-22-000001', 1, 1, '011233-0154', 1, 1, 'Bachelor of Science in Computer Science and Engineering', 'Spring 2022', 'graduated', NULL, '2022-01-15', '2026-05-30', '2026-05-15', 2, 1, NOW(), NOW()),
-(2, 'UIU-22-000002', 2, 1, '011233-0411', 1, 2, 'Bachelor of Science in Computer Science and Engineering', 'Spring 2022', 'graduated', NULL, '2022-01-15', '2026-05-30', '2026-05-15', 2, 1, NOW(), NOW()),
-(3, 'UIU-22-000003', 3, 1, '011223-0442', 1, 3, 'Bachelor of Science in Computer Science and Engineering', 'Spring 2022', 'graduated', NULL, '2022-01-15', '2026-05-30', '2026-05-15', 2, 1, NOW(), NOW()),
-(4, 'UIU-26-000004', 1, 1, '011233-0154', 1, 5, 'Master of Science in Computer Science',                  'Fall 2026',   'active',    NULL, '2026-06-01', '2028-06-01', NULL,         2, 5, NOW(), NOW()),
-(5, 'UIU-21-000005', 4, 1, '111223-0501', 3, 7, 'Bachelor of Business Administration',                    'Fall 2021',   'withdrawn', NULL, '2021-08-15', '2025-08-15', NULL,         2, 2, NOW(), NOW()),
-(6, 'UIU-20-000006', 5, 1, '021223-0502', 2, 6, 'Bachelor of Science in Electrical and Electronic Engineering', 'Spring 2020', 'suspended', 'Academic misconduct investigation pending.', '2020-01-15', '2024-05-30', NULL, 2, 1, NOW(), NOW()),
-(7, 'NSU-24-000007', 7, 2, '2410001',     4, 9, 'Bachelor of Science in Computer Science',                'Spring 2024', 'suspended', 'Disciplinary action.', '2024-01-15', '2028-01-15', NULL, 12, 7, NOW(), NOW()),
-(8, 'BRAC-23-00001', 3, 3, '2310001',     7, 13,'Bachelor of Science in Computer Science',                'Summer 2023', 'active',    NULL, '2023-05-15', '2027-05-15', NULL,         14,10, NOW(), NOW()),
-(9,  'UIU-23-000009', 8,  1, '011231-0101', 1, 1, 'Bachelor of Science in Computer Science and Engineering||CSE||Software Engineering', 'Spring 2023', 'active', NULL, '2023-01-15', '2027-01-15', NULL, 2, 1, NOW(), NOW()),
-(10, 'UIU-23-000010', 9,  1, '011231-0202', 1, 2, 'Bachelor of Science in Computer Science and Engineering||CSE||Data Science',         'Spring 2023', 'active', NULL, '2023-01-15', '2027-01-15', NULL, 2, 1, NOW(), NOW()),
-(11, 'UIU-24-000011', 10, 1, '011241-0303', 1, 3, 'Bachelor of Science in Computer Science and Engineering||CSE||Artificial Intelligence', 'Fall 2024',   'active', NULL, '2024-08-15', '2028-08-15', NULL, 2, 1, NOW(), NOW()),
-(12, 'UIU-24-000012', 11, 1, '111241-0404', 3, 7, 'Bachelor of Business Administration||BBA||Marketing',                                   'Fall 2024',   'active', NULL, '2024-08-15', '2028-08-15', NULL, 2, 2, NOW(), NOW()),
-(13, 'UIU-25-000013', 12, 1, '021251-0505', 2, 6, 'Bachelor of Science in Electrical and Electronic Engineering||EEE||Power Systems',        'Spring 2025', 'active', NULL, '2025-01-15', '2029-01-15', NULL, 2, 1, NOW(), NOW());
+INSERT INTO enrollments (id, enrollment_number, student_id, institution_id, roll_number, department_id, major_id, program_id, program, batch, status, suspension_reason, enrollment_date, expected_graduation_date, actual_graduation_date, enrolled_by, certificate_level_id, created_at, updated_at) VALUES
+(1, 'UIU-22-000001', 1, 1, '011233-0154', 1, 1, 1,    'Bachelor of Science in Computer Science and Engineering', 'Spring 2022', 'graduated', NULL, '2022-01-15', '2026-05-30', '2026-05-15', 2, 1, NOW(), NOW()),
+(2, 'UIU-22-000002', 2, 1, '011233-0411', 1, 2, 1,    'Bachelor of Science in Computer Science and Engineering', 'Spring 2022', 'graduated', NULL, '2022-01-15', '2026-05-30', '2026-05-15', 2, 1, NOW(), NOW()),
+(3, 'UIU-22-000003', 3, 1, '011223-0442', 1, 3, 1,    'Bachelor of Science in Computer Science and Engineering', 'Spring 2022', 'graduated', NULL, '2022-01-15', '2026-05-30', '2026-05-15', 2, 1, NOW(), NOW()),
+(4, 'UIU-26-000004', 1, 1, '011233-0154', 1, 5, 5,    'Master of Science in Computer Science',                  'Fall 2026',   'active',    NULL, '2026-06-01', '2028-06-01', NULL,         2, 5, NOW(), NOW()),
+(5, 'UIU-21-000005', 4, 1, '111223-0501', 3, 7, NULL, 'Bachelor of Business Administration',                    'Fall 2021',   'withdrawn', NULL, '2021-08-15', '2025-08-15', NULL,         2, 2, NOW(), NOW()),
+(6, 'UIU-20-000006', 5, 1, '021223-0502', 2, 6, 3,    'Bachelor of Science in Electrical and Electronic Engineering', 'Spring 2020', 'suspended', 'Academic misconduct investigation pending.', '2020-01-15', '2024-05-30', NULL, 2, 1, NOW(), NOW()),
+(7, 'NSU-24-000007', 7, 2, '2410001',     4, 9, NULL, 'Bachelor of Science in Computer Science',                'Spring 2024', 'suspended', 'Disciplinary action.', '2024-01-15', '2028-01-15', NULL, 12, 7, NOW(), NOW()),
+(8, 'BRAC-23-00001', 3, 3, '2310001',     7, 13,NULL, 'Bachelor of Science in Computer Science',                'Summer 2023', 'active',    NULL, '2023-05-15', '2027-05-15', NULL,         14,10, NOW(), NOW()),
+(9,  'UIU-23-000009', 8,  1, '011231-0101', 1, 1, 2,   'Bachelor of Science in Computer Science and Engineering||CSE||Software Engineering', 'Spring 2023', 'active', NULL, '2023-01-15', '2027-01-15', NULL, 2, 1, NOW(), NOW()),
+(10, 'UIU-23-000010', 9,  1, '011231-0202', 1, 2, 1,   'Bachelor of Science in Computer Science and Engineering||CSE||Data Science',         'Spring 2023', 'active', NULL, '2023-01-15', '2027-01-15', NULL, 2, 1, NOW(), NOW()),
+(11, 'UIU-24-000011', 10, 1, '011241-0303', 1, 3, 1,   'Bachelor of Science in Computer Science and Engineering||CSE||Artificial Intelligence', 'Fall 2024',   'active', NULL, '2024-08-15', '2028-08-15', NULL, 2, 1, NOW(), NOW()),
+(12, 'UIU-24-000012', 11, 1, '111241-0404', 3, 7, NULL,'Bachelor of Business Administration||BBA||Marketing',                                   'Fall 2024',   'active', NULL, '2024-08-15', '2028-08-15', NULL, 2, 2, NOW(), NOW()),
+(13, 'UIU-25-000013', 12, 1, '021251-0505', 2, 6, 3,   'Bachelor of Science in Electrical and Electronic Engineering||EEE||Power Systems',        'Spring 2025', 'active', NULL, '2025-01-15', '2029-01-15', NULL, 2, 1, NOW(), NOW());
 
 -- CERTIFICATE SEQUENCES
 INSERT INTO certificate_sequences (id, sequence_key, prefix, year_suffix, current_sequence, last_generated_at, created_at, updated_at) VALUES
@@ -150,13 +160,13 @@ INSERT INTO certificate_sequences (id, sequence_key, prefix, year_suffix, curren
 (3, 'BBA-25', 'BBA', '25', 1, NOW(), NOW(), NOW());
 
 -- CERTIFICATES
-INSERT INTO certificates (id, student_id, institution_id, enrollment_id, issued_by, serial, certificate_level_id, certificate_level, certificate_name, department_id, department, major_id, major, session, cgpa, degree_class, issue_date, convocation_date, authority_name, authority_title, pdf_path, is_publicly_shareable, revoked_at, revoked_by, revoked_by_role, revocation_reason, revocation_history, issued_name, created_at, updated_at) VALUES
-(1, 1, 1, 1, 2, 'BSc-26-000001B', 1, 'Bachelor of Science', 'Bachelor of Science in Computer Science and Engineering', 1, 'Computer Science and Engineering', 1, 'Software Engineering',    'Spring 2022', 3.85, 'First Class',  '2026-05-15', '2026-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'Sadid Ahmed',          NOW(), NOW()),
-(2, 2, 1, 2, 2, 'BSc-26-000002C', 1, 'Bachelor of Science', 'Bachelor of Science in Computer Science and Engineering', 1, 'Computer Science and Engineering', 2, 'Data Science',             'Spring 2022', 3.92, 'First Class',  '2026-05-15', '2026-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'M.M. Sayem Prodhan',   NOW(), NOW()),
-(3, 3, 1, 3, 2, 'BSc-26-000003D', 1, 'Bachelor of Science', 'Bachelor of Science in Computer Science and Engineering', 1, 'Computer Science and Engineering', 3, 'Artificial Intelligence',  'Spring 2022', 3.74, 'First Class',  '2026-05-15', '2026-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'Assaduzzaman Nur',     NOW(), NOW()),
-(4, 1, 1, 1, 2, 'BSc-26-000004E', 1, 'Bachelor of Science', 'Diploma in Advanced Web Development',                    1, 'Computer Science and Engineering', 4, 'Full-Stack Development',  'Fall 2025',   3.90, 'Distinction',  '2025-12-20', '2026-01-15', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 0, DATE_SUB(NOW(), INTERVAL 30 DAY), 2, 'university', 'Issued by mistake.', '[{"revoked_at":"2026-05-12","reason":"Issued by mistake."}]', 'Sadid Ahmed',          DATE_SUB(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL 30 DAY)),
-(5, 5, 1, 6, 2, 'BSc-26-000005F', 1, 'Bachelor of Science', 'Bachelor of Science in Electrical and Electronic Engineering', 2, 'Electrical and Electronic Engineering', 6, 'Power Systems', 'Spring 2020', 2.85, 'Second Class', '2024-05-15', '2024-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NOW(), 1, 'admin', 'Certificate revoked due to administrative grading error. A corrected certificate will be issued.', NULL, 'Safwan Al Sajid', NOW(), NOW()),
-(6, 1, 1, 4, 2, 'MSc-26-000001A', 5, 'Master of Science',   'Master of Science in Computer Science',                  1, 'Computer Science and Engineering', 5, 'Machine Learning',        'Fall 2026',   NULL, NULL,           '2026-05-15', NULL,         'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'Sadid Ahmed',          NOW(), NOW());
+INSERT INTO certificates (id, student_id, institution_id, enrollment_id, issued_by, serial, certificate_level_id, certificate_level, certificate_name, department_id, department, major_id, major, program_id, session, cgpa, degree_class, issue_date, convocation_date, authority_name, authority_title, pdf_path, is_publicly_shareable, revoked_at, revoked_by, revoked_by_role, revocation_reason, revocation_history, issued_name, created_at, updated_at) VALUES
+(1, 1, 1, 1, 2, 'BSc-26-000001B', 1, 'Bachelor of Science', 'Bachelor of Science in Computer Science and Engineering', 1, 'Computer Science and Engineering', 1, 'Software Engineering',    1, 'Spring 2022', 3.85, 'First Class',  '2026-05-15', '2026-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'Sadid Ahmed',          NOW(), NOW()),
+(2, 2, 1, 2, 2, 'BSc-26-000002C', 1, 'Bachelor of Science', 'Bachelor of Science in Computer Science and Engineering', 1, 'Computer Science and Engineering', 2, 'Data Science',             1, 'Spring 2022', 3.92, 'First Class',  '2026-05-15', '2026-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'M.M. Sayem Prodhan',   NOW(), NOW()),
+(3, 3, 1, 3, 2, 'BSc-26-000003D', 1, 'Bachelor of Science', 'Bachelor of Science in Computer Science and Engineering', 1, 'Computer Science and Engineering', 3, 'Artificial Intelligence',  1, 'Spring 2022', 3.74, 'First Class',  '2026-05-15', '2026-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'Assaduzzaman Nur',     NOW(), NOW()),
+(4, 1, 1, 1, 2, 'BSc-26-000004E', 1, 'Bachelor of Science', 'Diploma in Advanced Web Development',                    1, 'Computer Science and Engineering', 4, 'Full-Stack Development',  1, 'Fall 2025',   3.90, 'Distinction',  '2025-12-20', '2026-01-15', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 0, DATE_SUB(NOW(), INTERVAL 30 DAY), 2, 'university', 'Issued by mistake.', '[{"revoked_at":"2026-05-12","reason":"Issued by mistake."}]', 'Sadid Ahmed',          DATE_SUB(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL 30 DAY)),
+(5, 5, 1, 6, 2, 'BSc-26-000005F', 1, 'Bachelor of Science', 'Bachelor of Science in Electrical and Electronic Engineering', 2, 'Electrical and Electronic Engineering', 6, 'Power Systems', 3, 'Spring 2020', 2.85, 'Second Class', '2024-05-15', '2024-05-30', 'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NOW(), 1, 'admin', 'Certificate revoked due to administrative grading error. A corrected certificate will be issued.', NULL, 'Safwan Al Sajid', NOW(), NOW()),
+(6, 1, 1, 4, 2, 'MSc-26-000001A', 5, 'Master of Science',   'Master of Science in Computer Science',                  1, 'Computer Science and Engineering', 5, 'Machine Learning',        5, 'Fall 2026',   NULL, NULL,           '2026-05-15', NULL,         'Prof. Dr. Md. Abul Kashem Mia', 'Vice Chancellor', NULL, 1, NULL, NULL, NULL, NULL, NULL, 'Sadid Ahmed',          NOW(), NOW());
 
 -- ACCESS REQUESTS
 INSERT INTO certificate_access_requests (id, verifier_id, student_id, purpose, status, responded_at, rejection_reason, access_duration_days, created_at, updated_at) VALUES

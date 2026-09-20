@@ -797,58 +797,52 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     studentIdInUniversity: '',
     program: '',
+    programId: '',
     certificateLevelId: '',
     departmentId: '',
-    majorId: '',
     batch: '',
     enrollmentDate: new Date().toISOString().split('T')[0],
     expectedGraduationDate: '',
   });
 
-  const [certLevels, setCertLevels] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [majors, setMajors] = useState([]);
-
-  useEffect(() => {
-    if (step === 2) {
-      api.get('/university/certificate-levels')
-        .then(res => {
-          if (res.data.success) {
-            setCertLevels(res.data.certificate_levels.filter(l => l.isActive !== false));
-          }
-        }).catch(err => console.error('Failed to load cert levels', err));
-    }
-  }, [step]);
-
-  useEffect(() => {
-    if (formData.certificateLevelId) {
-      api.get('/university/departments', { params: { certificate_level_id: formData.certificateLevelId } })
-        .then(res => {
-          if (res.data.success) {
-            setDepartments(res.data.departments.filter(d => d.isActive !== false));
-          }
-        }).catch(err => console.error('Failed to load departments', err));
-    } else {
-      setDepartments([]);
-    }
-    // reset downstream fields only if not initial load mapping (in enroll mode it is always user interaction)
-    setFormData(prev => ({ ...prev, departmentId: '', majorId: '' }));
-  }, [formData.certificateLevelId]);
-
-  useEffect(() => {
-    if (formData.departmentId) {
-      api.get('/university/majors', { params: { department_id: formData.departmentId } })
-        .then(res => {
-          if (res.data.success) {
-            setMajors(res.data.majors.filter(m => m.isActive !== false));
-          }
-        }).catch(err => console.error('Failed to load majors', err));
-    } else {
-      setMajors([]);
-    }
-    setFormData(prev => ({ ...prev, majorId: '' }));
-  }, [formData.departmentId]);
+  const [programStructure, setProgramStructure] = useState([]);
+  const [loadingStructure, setLoadingStructure] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch program structure on modal open
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingStructure(true);
+      api.get('/university/program-structure')
+        .then((res) => {
+          if (res.data?.success) {
+            setProgramStructure(res.data.certificateLevels || []);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load program structure:', err);
+        })
+        .finally(() => setLoadingStructure(false));
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setStep(1);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSelectedStudent(null);
+    setFormData({
+      studentIdInUniversity: '',
+      program: '',
+      programId: '',
+      certificateLevelId: '',
+      departmentId: '',
+      batch: '',
+      enrollmentDate: new Date().toISOString().split('T')[0],
+      expectedGraduationDate: '',
+    });
+    onClose();
+  };
 
   // Step 1: Debounced student search or manual search
   const handleSearchStudents = async (query) => {
@@ -879,6 +873,105 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
     setStep(2);
   };
 
+  // Helper to calculate graduation date
+  const calculateGraduationDate = (enrollDateStr, durationYears) => {
+    if (!enrollDateStr) return '';
+    try {
+      const parts = enrollDateStr.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const duration = parseInt(durationYears, 10) || 4;
+        const gradYear = year + duration;
+        return `${gradYear}-${parts[1]}-${parts[2]}`;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return '';
+  };
+
+  // Cascading options derived from programStructure
+  const activeLevels = useMemo(() => {
+    return (programStructure || []).filter((l) => l.isActive !== false);
+  }, [programStructure]);
+
+  const selectedLevel = useMemo(() => {
+    return activeLevels.find((l) => String(l.id) === String(formData.certificateLevelId)) || null;
+  }, [activeLevels, formData.certificateLevelId]);
+
+  const availableDepartments = useMemo(() => {
+    if (!selectedLevel?.departments) return [];
+    return selectedLevel.departments.filter((d) => d.isActive !== false);
+  }, [selectedLevel]);
+
+  const selectedDept = useMemo(() => {
+    return availableDepartments.find((d) => String(d.id) === String(formData.departmentId)) || null;
+  }, [availableDepartments, formData.departmentId]);
+
+  const availablePrograms = useMemo(() => {
+    if (!selectedDept?.programs) return [];
+    return selectedDept.programs.filter((p) => p.isActive !== false);
+  }, [selectedDept]);
+
+  // Dropdown 1 Change
+  const handleLevelChange = (levelId) => {
+    const level = activeLevels.find((l) => String(l.id) === String(levelId));
+    let newGradDate = formData.expectedGraduationDate;
+    if (level?.durationYears) {
+      newGradDate = calculateGraduationDate(
+        formData.enrollmentDate || new Date().toISOString().split('T')[0],
+        level.durationYears
+      );
+    }
+    setFormData((prev) => ({
+      ...prev,
+      certificateLevelId: levelId,
+      departmentId: '',
+      programId: '',
+      program: '',
+      expectedGraduationDate: newGradDate,
+    }));
+  };
+
+  // Dropdown 2 Change
+  const handleDepartmentChange = (deptId) => {
+    setFormData((prev) => ({
+      ...prev,
+      departmentId: deptId,
+      programId: '',
+      program: '',
+    }));
+  };
+
+  // Dropdown 3 Change
+  const handleProgramChange = (progId) => {
+    const prog = availablePrograms.find((p) => String(p.id) === String(progId));
+    const duration = selectedLevel?.durationYears || 4;
+    const autoGradDate = calculateGraduationDate(
+      formData.enrollmentDate || new Date().toISOString().split('T')[0],
+      duration
+    );
+    setFormData((prev) => ({
+      ...prev,
+      programId: progId,
+      program: prog ? prog.name : '',
+      expectedGraduationDate: autoGradDate || prev.expectedGraduationDate,
+    }));
+  };
+
+  // Enrollment Date Change (recalculates graduation date)
+  const handleEnrollmentDateChange = (newEnrollDate) => {
+    let updatedGradDate = formData.expectedGraduationDate;
+    if (selectedLevel?.durationYears) {
+      updatedGradDate = calculateGraduationDate(newEnrollDate, selectedLevel.durationYears);
+    }
+    setFormData((prev) => ({
+      ...prev,
+      enrollmentDate: newEnrollDate,
+      expectedGraduationDate: updatedGradDate,
+    }));
+  };
+
   const handleSubmitEnrollment = async (e) => {
     e.preventDefault();
     if (!selectedStudent) {
@@ -899,7 +992,7 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
       toast.error('Department is required');
       return;
     }
-    if (!formData.program.trim()) {
+    if (!formData.programId) {
       toast.error('Program is required');
       return;
     }
@@ -922,10 +1015,10 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
       const payload = {
         studentEmail: selectedStudent.email,
         studentIdInUniversity: formData.studentIdInUniversity.trim(),
+        programId: parseInt(formData.programId, 10),
+        certificateLevelId: parseInt(formData.certificateLevelId, 10),
+        departmentId: parseInt(formData.departmentId, 10),
         program: formData.program.trim(),
-        certificateLevelId: formData.certificateLevelId ? parseInt(formData.certificateLevelId, 10) : undefined,
-        departmentId: formData.departmentId ? parseInt(formData.departmentId, 10) : undefined,
-        majorId: formData.majorId ? parseInt(formData.majorId, 10) : undefined,
         batch: formData.batch.trim(),
         enrollmentDate: formData.enrollmentDate,
         expectedGraduationDate: formData.expectedGraduationDate,
@@ -934,12 +1027,16 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
       const response = await api.post('/university/enrollments', payload);
       if (response.data.success) {
         toast.success(response.data.message || 'Student enrolled successfully');
+        handleClose();
         onSuccess();
       }
     } catch (err) {
       console.error('Failed to enroll student:', err);
       const errors = err.response?.data?.errors;
-      const errorMsg = err.response?.data?.message || (errors && typeof errors === 'object' ? Object.values(errors).flat().join(', ') : null) || 'Failed to enroll student';
+      const errorMsg =
+        err.response?.data?.message ||
+        (errors && typeof errors === 'object' ? Object.values(errors).flat().join(', ') : null) ||
+        'Failed to enroll student';
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -949,7 +1046,7 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={step === 1 ? 'Enroll Student — Step 1: Select Student' : 'Enroll Student — Step 2: Academic Details'}
       size="lg"
     >
@@ -1083,7 +1180,7 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
             {/* Student ID in University */}
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                Assign Student ID <span className="text-rose-500">*</span>
+                Student ID in University <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -1095,7 +1192,7 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
               />
             </div>
 
-            {/* Certificate Level */}
+            {/* Dropdown 1: Certificate Level */}
             <div>
               <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                 Certificate Level <span className="text-rose-500">*</span>
@@ -1103,67 +1200,83 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
               <select
                 required
                 value={formData.certificateLevelId}
-                onChange={(e) => setFormData({ ...formData, certificateLevelId: e.target.value })}
+                onChange={(e) => handleLevelChange(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10"
               >
                 <option value="">Select Level...</option>
-                {certLevels.map(l => (
-                  <option key={l.id} value={l.id}>{l.name} ({l.shortCode})</option>
+                {activeLevels.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} ({l.shortName || l.shortCode})
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Department */}
+            {/* Dropdown 2: Department */}
             <div>
               <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                 Department <span className="text-rose-500">*</span>
               </label>
               <select
                 required
-                disabled={!formData.certificateLevelId}
+                disabled={!formData.certificateLevelId || availableDepartments.length === 0}
                 value={formData.departmentId}
-                onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10 disabled:opacity-50"
               >
-                <option value="">Select Department...</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} ({d.shortCode})</option>
+                <option value="">
+                  {!formData.certificateLevelId
+                    ? 'Select Level first...'
+                    : availableDepartments.length === 0
+                    ? 'No departments under this level'
+                    : 'Select Department...'}
+                </option>
+                {availableDepartments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {d.shortCode ? `(${d.shortCode})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Major (optional) */}
-            <div>
+            {/* Dropdown 3: Program */}
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                Major <span className="text-xs font-normal text-[var(--text-muted)]">(Optional)</span>
+                Program <span className="text-rose-500">*</span>
               </label>
               <select
-                disabled={!formData.departmentId || majors.length === 0}
-                value={formData.majorId}
-                onChange={(e) => setFormData({ ...formData, majorId: e.target.value })}
+                required
+                disabled={!formData.departmentId || availablePrograms.length === 0}
+                value={formData.programId}
+                onChange={(e) => handleProgramChange(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10 disabled:opacity-50"
               >
-                <option value="">{majors.length === 0 && formData.departmentId ? 'No majors available' : 'Select Major...'}</option>
-                {majors.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+                <option value="">
+                  {!formData.departmentId
+                    ? 'Select Department first...'
+                    : availablePrograms.length === 0
+                    ? 'No programs under this department'
+                    : 'Select Program...'}
+                </option>
+                {availablePrograms.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.shortName ? `(${p.shortName})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Program */}
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                Program Title <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.program}
-                onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                placeholder="e.g. B.Sc. in Computer Science & Engineering"
-                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10"
-              />
-            </div>
+            {/* Read-only Certificate Name Display */}
+            {formData.program && (
+              <div className="sm:col-span-2 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-3 text-xs">
+                <span className="font-semibold text-[var(--text-muted)]">
+                  Certificate Name (Auto-filled):
+                </span>
+                <p className="font-bold text-sm text-[var(--text-primary)] mt-0.5">
+                  {formData.program}
+                </p>
+              </div>
+            )}
 
             {/* Batch */}
             <div>
@@ -1175,7 +1288,7 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
                 required
                 value={formData.batch}
                 onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                placeholder="e.g. 2024-Spring"
+                placeholder="e.g. Spring 2026"
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10"
               />
             </div>
@@ -1189,16 +1302,23 @@ function EnrollStudentModal({ isOpen, onClose, onSuccess }) {
                 type="date"
                 required
                 value={formData.enrollmentDate}
-                onChange={(e) => setFormData({ ...formData, enrollmentDate: e.target.value })}
+                onChange={(e) => handleEnrollmentDateChange(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/10"
               />
             </div>
 
-            {/* Expected Graduation Date */}
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                Expected Graduation Date <span className="text-rose-500">*</span>
-              </label>
+            {/* Expected Graduation Date (auto-filled, editable) */}
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+                  Expected Graduation Date <span className="text-rose-500">*</span>
+                </label>
+                {selectedLevel?.durationYears && (
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    Auto-calculated ({selectedLevel.durationYears} yrs, editable)
+                  </span>
+                )}
+              </div>
               <input
                 type="date"
                 required
@@ -1354,8 +1474,8 @@ function ViewEnrollmentModal({ enrollment, onClose, onEdit, onExtend, onWithdraw
           )}
         </div>
 
-        {/* Withdrawal Details Callout (if withdrawal_requested or has withdrawalReason) */}
-        {(enrollment.status === 'withdrawal_requested' || enrollment.withdrawalReason) && (
+        {/* Withdrawal Request Notice (pending) */}
+        {enrollment.status === 'withdrawal_requested' && !enrollment.withdrawalRequest && enrollment.withdrawalReason && (
           <div className="rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-800/40 dark:bg-amber-950/20">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
               <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -1370,6 +1490,118 @@ function ViewEnrollmentModal({ enrollment, onClose, onEdit, onExtend, onWithdraw
               <p className="mt-2 text-[11px] text-[var(--text-muted)]">
                 Requested on: {formatDate(enrollment.withdrawalRequestedAt)}
               </p>
+            )}
+          </div>
+        )}
+
+        {/* Full Withdrawal Details (withdrawn status with WR data) */}
+        {enrollment.withdrawalRequest && (
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)]/60 overflow-hidden">
+            <div className={`px-4 py-3 flex items-center gap-2 ${
+              enrollment.withdrawalRequest.requestedBy === 'university'
+                ? 'bg-slate-100/80 dark:bg-slate-800/40 border-b border-[var(--border)]'
+                : 'bg-amber-50/80 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-800/30'
+            }`}>
+              <AlertTriangle className={`h-4 w-4 shrink-0 ${
+                enrollment.withdrawalRequest.requestedBy === 'university'
+                  ? 'text-slate-500'
+                  : 'text-amber-600 dark:text-amber-400'
+              }`} />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                Withdrawal Details
+              </h4>
+              <span className={`ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                enrollment.withdrawalRequest.status === 'approved'
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                  : enrollment.withdrawalRequest.status === 'rejected'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                  : enrollment.withdrawalRequest.status === 'direct'
+                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+              }`}>
+                {enrollment.withdrawalRequest.status === 'approved' ? 'Approved'
+                  : enrollment.withdrawalRequest.status === 'rejected' ? 'Rejected'
+                  : enrollment.withdrawalRequest.status === 'direct' ? 'Direct Withdrawal'
+                  : 'Pending'}
+              </span>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* Requested By */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-semibold w-28 shrink-0">Requested by</span>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  enrollment.withdrawalRequest.requestedBy === 'university'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                }`}>
+                  {enrollment.withdrawalRequest.requestedBy === 'university'
+                    ? '🏛️ University (Direct)'
+                    : '🎓 Student'}
+                </span>
+              </div>
+
+              {/* Reason */}
+              {enrollment.withdrawalRequest.reason && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-semibold mb-1">Reason</p>
+                  <blockquote className="rounded-lg border-l-4 border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-600/40 px-3 py-2 text-sm italic text-[var(--text-secondary)] leading-relaxed">
+                    "{enrollment.withdrawalRequest.reason}"
+                  </blockquote>
+                </div>
+              )}
+
+              {/* Response Message (if any) */}
+              {enrollment.withdrawalRequest.responseMessage && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-semibold mb-1">University Response</p>
+                  <blockquote className={`rounded-lg border-l-4 px-3 py-2 text-sm text-[var(--text-secondary)] leading-relaxed ${
+                    enrollment.withdrawalRequest.status === 'rejected'
+                      ? 'border-green-400 bg-green-50/50 dark:bg-green-950/20 dark:border-green-600/40'
+                      : 'border-slate-300 bg-slate-50/50 dark:bg-slate-800/30 dark:border-slate-600/40'
+                  }`}>
+                    {enrollment.withdrawalRequest.responseMessage}
+                  </blockquote>
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {enrollment.withdrawalRequest.requestedAt && (
+                  <div>
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-semibold">Requested On</p>
+                    <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">
+                      {formatDate(enrollment.withdrawalRequest.requestedAt)}
+                    </p>
+                  </div>
+                )}
+                {enrollment.withdrawalRequest.respondedAt && (
+                  <div>
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-semibold">Responded On</p>
+                    <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">
+                      {formatDate(enrollment.withdrawalRequest.respondedAt)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* University direct withdrawal (status=withdrawn, no WR record) */}
+        {enrollment.status === 'withdrawn' && !enrollment.withdrawalRequest && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700/40 dark:bg-slate-800/20">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+              <LogOut className="h-4 w-4 shrink-0" />
+              <h4 className="text-xs font-bold uppercase tracking-wider">Withdrawal Details</h4>
+              <span className="ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                Direct Withdrawal
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">Withdrawn directly by the university (no student request).</p>
+            {enrollment.withdrawalReason && (
+              <blockquote className="mt-2 rounded-lg border-l-4 border-slate-300 bg-white/50 dark:bg-slate-900/30 px-3 py-2 text-xs italic text-[var(--text-secondary)]">
+                "{enrollment.withdrawalReason}"
+              </blockquote>
             )}
           </div>
         )}

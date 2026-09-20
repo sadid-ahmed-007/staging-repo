@@ -21,6 +21,9 @@ public class EnrollmentResponse {
     private Long certificateLevelId;
     private Long departmentId;
     private Long majorId;
+    private Long programId;
+    private String programName;
+    private String programShortName;
     private String batch;
 
     /**
@@ -39,6 +42,12 @@ public class EnrollmentResponse {
     // Withdrawal info (populated when status = withdrawal_requested)
     private String withdrawalReason;
     private LocalDateTime withdrawalRequestedAt;
+
+    /**
+     * Full withdrawal details for university view.
+     * Populated when a withdrawal request exists OR when status = withdrawn (direct or approved).
+     */
+    private WithdrawalRequestInfo withdrawalRequest;
 
     // Certificate info (populated when status = graduated)
     private Long certificateId;

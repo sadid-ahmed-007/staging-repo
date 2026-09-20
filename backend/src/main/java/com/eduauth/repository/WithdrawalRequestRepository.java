@@ -13,6 +13,9 @@ public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalReq
     Optional<WithdrawalRequest> findFirstByEnrollmentIdAndStatusOrderByCreatedAtDesc(
             Long enrollmentId, String status);
 
+    /** Get the most recent withdrawal request for an enrollment, regardless of status. */
+    Optional<WithdrawalRequest> findFirstByEnrollmentIdOrderByCreatedAtDesc(Long enrollmentId);
+
     List<WithdrawalRequest> findByStudentIdOrderByCreatedAtDesc(Long studentId);
 
     Optional<WithdrawalRequest> findFirstByStudentIdOrderByCreatedAtDesc(Long studentId);

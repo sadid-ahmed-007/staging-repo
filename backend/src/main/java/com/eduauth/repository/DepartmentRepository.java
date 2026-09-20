@@ -9,7 +9,20 @@ import java.util.Optional;
 
 @Repository
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
+
     List<Department> findByInstitutionId(Long institutionId);
+
+    List<Department> findByInstitutionIdAndIsActiveTrue(Long institutionId);
+
+    List<Department> findByInstitutionIdOrderByNameAsc(Long institutionId);
+
     List<Department> findByInstitutionIdAndCertificateLevelId(Long institutionId, Long certificateLevelId);
+
+    List<Department> findByCertificateLevelIdAndIsActiveTrue(Long certificateLevelId);
+
+    List<Department> findByCertificateLevelId(Long certificateLevelId);
+
     Optional<Department> findByIdAndInstitutionId(Long id, Long institutionId);
+
+    boolean existsByCertificateLevelId(Long certificateLevelId);
 }

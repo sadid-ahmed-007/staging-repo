@@ -22,6 +22,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     long countByStudentIdAndIsPubliclyShareableFalse(Long studentId);
     long countByInstitutionId(Long institutionId);
     long countByInstitutionIdAndIssueDateBetween(Long institutionId, LocalDate start, LocalDate end);
+    List<Certificate> findByInstitutionId(Long institutionId);
 
     // ── Lookup by serial (public verify + student PDF) ────────────────────────
     @Query("""
