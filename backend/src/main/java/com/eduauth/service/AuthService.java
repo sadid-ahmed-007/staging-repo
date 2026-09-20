@@ -201,6 +201,11 @@ public class AuthService {
             throw new UnauthorizedException("Your account has been suspended");
         }
 
+        // CHECK 6: Verify the account has not been deactivated
+        if (Boolean.TRUE.equals(user.getIsDeactivated())) {
+            throw new BadRequestException("This account has been deactivated. Contact support to reactivate.");
+        }
+
         String token = jwtService.generateToken(user);
         
         logActivity(user.getId(), "USER_LOGIN", "User logged in from " + ipAddress);

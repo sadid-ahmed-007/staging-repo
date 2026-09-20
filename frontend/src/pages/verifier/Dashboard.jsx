@@ -8,93 +8,93 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function VerifierDashboard() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
-  const navigate = useNavigate();
+ const [stats, setStats] = useState(null);
+ const [loading, setLoading] = useState(true);
+ const { user } = useAuth();
+ const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const { data } = await api.get('/verifier/dashboard');
-        setStats(data.data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+ useEffect(() => {
+ const fetchDashboard = async () => {
+ try {
+ const { data } = await api.get('/verifier/dashboard');
+ setStats(data.data);
+ } catch (error) {
+ console.error('Failed to fetch dashboard:', error);
+ } finally {
+ setLoading(false);
+ }
+ };
 
-    fetchDashboard();
-  }, []);
+ fetchDashboard();
+ }, []);
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <LoadingSpinner />
-        </div>
-      </DashboardLayout>
-    );
-  }
+ if (loading) {
+ return (
+ <DashboardLayout>
+ <div className="flex min-h-[50vh] items-center justify-center">
+ <LoadingSpinner />
+ </div>
+ </DashboardLayout>
+ );
+ }
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-            Verifier Dashboard
-          </h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Welcome back{user?.name ? `, ${user.name}` : ''}
-          </p>
-        </div>
+ return (
+ <DashboardLayout>
+ <div className="space-y-6">
+ <div>
+ <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+ Verifier Dashboard
+ </h1>
+ <p className="text-sm text-[var(--text-secondary)] mt-1">
+ Welcome back{user?.name ? `, ${user.name}` : ''}
+ </p>
+ </div>
 
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          <StatCard 
-            icon={<Users className="h-5 w-5 text-blue-500" />} 
-            label="Accessible Students" 
-            value={stats?.accessibleStudents ?? 0} 
-            color="blue"
-            to="/verifier/accessible-certificates"
-          />
-          <StatCard 
-            icon={<Clock className="h-5 w-5 text-yellow-500" />} 
-            label="Pending Requests" 
-            value={stats?.pendingRequests ?? 0} 
-            color="yellow"
-            to="/verifier/access-requests?status=pending"
-          />
-          <StatCard 
-            icon={<Calendar className="h-5 w-5 text-green-500" />} 
-            label="Verifications Today" 
-            value={stats?.verificationsToday ?? 0} 
-            color="green"
-            to="/verifier/verification-history?filter=today"
-          />
-          <StatCard 
-            icon={<ShieldCheck className="h-5 w-5 text-blue-500" />} 
-            label="Total Verifications" 
-            value={stats?.totalVerifications ?? 0} 
-            color="blue"
-            to="/verifier/verification-history"
-          />
-          <StatCard 
-            icon={<CheckCircle className="h-5 w-5 text-green-500" />} 
-            label="Approved Requests" 
-            value={stats?.approvedRequests ?? 0} 
-            color="green"
-            to="/verifier/access-requests?status=approved"
-          />
-          <StatCard 
-            icon={<XCircle className="h-5 w-5 text-red-500" />} 
-            label="Rejected Requests" 
-            value={stats?.rejectedRequests ?? 0} 
-            color="red"
-            to="/verifier/access-requests?status=rejected"
-          />
-        </div>
-      </div>
-    </DashboardLayout>
-  );
+ <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+ <StatCard 
+ icon={<Users className="h-5 w-5 text-blue-500" />} 
+ label="Accessible Students" 
+ value={stats?.accessibleStudents ?? 0} 
+ color="blue"
+ to="/verifier/accessible-certificates"
+ />
+ <StatCard 
+ icon={<Clock className="h-5 w-5 text-yellow-500" />} 
+ label="Pending Requests" 
+ value={stats?.pendingRequests ?? 0} 
+ color="yellow"
+ to="/verifier/access-requests?status=pending"
+ />
+ <StatCard 
+ icon={<Calendar className="h-5 w-5 text-green-500" />} 
+ label="Verifications Today" 
+ value={stats?.verificationsToday ?? 0} 
+ color="green"
+ to="/verifier/verification-history?filter=today"
+ />
+ <StatCard 
+ icon={<ShieldCheck className="h-5 w-5 text-blue-500" />} 
+ label="Total Verifications" 
+ value={stats?.totalVerifications ?? 0} 
+ color="blue"
+ to="/verifier/verification-history"
+ />
+ <StatCard 
+ icon={<CheckCircle className="h-5 w-5 text-green-500" />} 
+ label="Approved Requests" 
+ value={stats?.approvedRequests ?? 0} 
+ color="green"
+ to="/verifier/access-requests?status=approved"
+ />
+ <StatCard 
+ icon={<XCircle className="h-5 w-5 text-red-500" />} 
+ label="Rejected Requests" 
+ value={stats?.rejectedRequests ?? 0} 
+ color="red"
+ to="/verifier/access-requests?status=rejected"
+ />
+ </div>
+ </div>
+ </DashboardLayout>
+ );
 }

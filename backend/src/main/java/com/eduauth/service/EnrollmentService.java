@@ -38,6 +38,7 @@ public class EnrollmentService {
     private final ProgramRepository programRepository;
     private final NotificationService notificationService;
     private final CertificateRepository certificateRepository;
+    private final com.eduauth.repository.UniversityApplicationRepository universityApplicationRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // ENROLL STUDENT
@@ -813,6 +814,10 @@ public class EnrollmentService {
             if (isActiveAnywhere && hasPendingWithdrawal) currentStatus = "withdrawal_requested";
             else if (isActiveAnywhere) currentStatus = "active";
 
+            // Check if this student has an accepted application to THIS institution
+            boolean hasAcceptedApplication = universityApplicationRepository
+                    .existsByStudentIdAndUniversityIdAndStatus(student.getId(), institutionId, "accepted");
+
             Map<String, Object> row = new java.util.LinkedHashMap<>();
             row.put("id", student.getId());
             row.put("name", buildName(student));
@@ -820,6 +825,7 @@ public class EnrollmentService {
             row.put("currentEnrollmentStatus", currentStatus);
             row.put("activeInstitution", activeInstitution != null ? activeInstitution : "");
             row.put("canEnroll", !isActiveAnywhere && !hasPendingWithdrawal);
+            row.put("hasAcceptedApplication", hasAcceptedApplication);
             return row;
         }).collect(Collectors.toList());
     }

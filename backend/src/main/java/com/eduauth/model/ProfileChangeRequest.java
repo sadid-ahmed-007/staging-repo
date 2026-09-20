@@ -51,8 +51,8 @@ public class ProfileChangeRequest {
     @Column(name = "review_notes", columnDefinition = "TEXT")
     private String reviewNotes;
 
-    @Column(name = "supporting_documents", columnDefinition = "JSON")
-    private String supportingDocuments;
+    @Column(name = "supporting_document_path", length = 500)
+    private String supportingDocumentPath;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

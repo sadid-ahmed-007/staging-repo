@@ -66,7 +66,7 @@ export default function ParticipatingUniversities() {
 
  <div className="max-w-xl mx-auto mb-12 relative">
  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
- <Search className="h-5 w-5 text-gray-400" />
+ <Search className="h-5 w-5 text-[var(--text-muted)]" />
  </div>
  <input
  type="text"
@@ -90,14 +90,14 @@ export default function ParticipatingUniversities() {
  </div>
  ) : (
  <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
- {filteredUniversities.map((uni) => (
+ {filteredUniversities?.map((uni) => (
  <div key={uni.id} className="group flex flex-col h-full bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
  <div className="p-6 sm:p-8 flex-grow flex flex-col">
  <div className="flex items-start justify-between gap-4 mb-6">
- <div className="h-12 w-12 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
- <Building2 className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+ <div className="h-12 w-12 rounded-xl bg-primary-50 /20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+ <Building2 className="h-6 w-6 text-primary-600 " />
  </div>
- <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
+ <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 /10 /20">
  <ShieldCheck className="h-3.5 w-3.5" />
  Verified
  </span>

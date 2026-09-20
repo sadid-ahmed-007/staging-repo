@@ -53,9 +53,9 @@ export default function SecurityCompliance() {
  </div>
 
  <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-[1200px] mx-auto mb-20">
- {securityFeatures.map((feature, i) => (
+ {securityFeatures?.map((feature, i) => (
  <div key={i} className="group bg-[var(--bg-surface)] rounded-3xl p-8 border border-[var(--border)] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col items-start gap-6">
- <div className="flex-shrink-0 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+ <div className="flex-shrink-0 bg-gray-50 /50 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
  {feature.icon}
  </div>
  <div>
@@ -68,7 +68,7 @@ export default function SecurityCompliance() {
  ))}
  </div>
 
- <div className="max-w-3xl mx-auto text-center bg-blue-50 dark:bg-blue-900/20 rounded-3xl p-10 border border-blue-100 dark:border-blue-800/30">
+ <div className="max-w-3xl mx-auto text-center bg-blue-50 /20 rounded-3xl p-10 border border-blue-100 /30">
  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">Have a security concern?</h2>
  <p className="text-[var(--text-secondary)] mb-8">
  If you discover a security vulnerability, please contact us immediately.

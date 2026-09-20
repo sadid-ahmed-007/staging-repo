@@ -1,8 +1,10 @@
 package com.eduauth.controller.admin;
 
 import com.eduauth.exception.ResourceNotFoundException;
+import com.eduauth.model.AccountDeletionRequest;
 import com.eduauth.model.ActivityLog;
 import com.eduauth.model.User;
+import com.eduauth.repository.AccountDeletionRequestRepository;
 import com.eduauth.repository.ActivityLogRepository;
 import com.eduauth.repository.UserRepository;
 import com.eduauth.service.EmailService;
@@ -11,9 +13,12 @@ import com.eduauth.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -27,6 +32,7 @@ public class AdminUserController {
     private final JwtService jwtService;
     private final com.eduauth.service.AdminUserService adminUserService;
     private final NotificationService notificationService;
+    private final AccountDeletionRequestRepository deletionRequestRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -139,5 +145,37 @@ public class AdminUserController {
         );
 
         return ResponseEntity.ok(Map.of("success", true, "message", "User approved successfully"));
+    }
+
+    @PostMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public ResponseEntity<?> reactivateUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User admin) {
+
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        target.setIsDeactivated(false);
+        target.setDeactivatedAt(null);
+        userRepository.save(target);
+
+        ActivityLog log = new ActivityLog();
+        log.setUserId(id);
+        log.setAction("ACCOUNT_REACTIVATED");
+        log.setDescription("Account reactivated by admin");
+        activityLogRepository.save(log);
+
+        notificationService.createNotification(
+                id,
+                "ACCOUNT_APPROVED",
+                "Account Reactivated",
+                "Your account has been reactivated by an administrator. You can now log in.",
+                "/login",
+                Map.of()
+        );
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "User account reactivated"));
     }
 }

@@ -56,12 +56,14 @@ public class Student {
     private String address;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "avatar_path", length = 500)
+    private String avatarPath;
 
     // Soft delete column — not managed by Hibernate, kept for schema compliance
     @Column(name = "deleted_at")

@@ -31,4 +31,6 @@ public interface ProfileChangeRequestRepository extends JpaRepository<ProfileCha
     List<ProfileChangeRequest> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     long countByUserIdAndStatus(Long userId, String status);
+
+    boolean existsByUserIdAndFieldNameAndStatus(Long userId, String fieldName, String status);
 }

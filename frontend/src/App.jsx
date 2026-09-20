@@ -38,12 +38,15 @@ const StudentDashboard = React.lazy(() => import('./pages/student/Dashboard'));
 const StudentCertificates = React.lazy(() => import('./pages/student/Certificates'));
 const StudentAccessRequests = React.lazy(() => import('./pages/student/AccessRequests'));
 const MyUniversity = React.lazy(() => import('./pages/student/MyUniversity'));
-const BrowseUniversities = React.lazy(() => import('./pages/student/BrowseUniversities'));
+const Universities = React.lazy(() => import('./pages/student/Universities'));
+const StudentApplications = React.lazy(() => import('./pages/student/Applications'));
+const StudentHistory = React.lazy(() => import('./pages/student/History'));
 
 // University pages
 const UniversityDashboard = React.lazy(() => import('./pages/university/Dashboard'));
 const UniversityCertificates = React.lazy(() => import('./pages/university/Certificates'));
 const Enrollments = React.lazy(() => import('./pages/university/Enrollments'));
+const UniversityApplications = React.lazy(() => import('./pages/university/Applications'));
 const IssueCertificate = React.lazy(() => import('./pages/university/IssueCertificate'));
 const UniversitySettings = React.lazy(() => import('./pages/university/Settings'));
 
@@ -63,6 +66,7 @@ const AdminUsers = React.lazy(() => import('./pages/admin/Users'));
 const AdminUserDetails = React.lazy(() => import('./pages/admin/UserDetails'));
 const ProfileChangeRequests = React.lazy(() => import('./pages/admin/ProfileChangeRequests'));
 const AdminActivityLogs = React.lazy(() => import('./pages/admin/ActivityLogs'));
+const AdminDeletionRequests = React.lazy(() => import('./pages/admin/DeletionRequests'));
 
 // Public pages
 const VerifyCertificate = React.lazy(() => import('./pages/public/VerifyCertificate'));
@@ -133,7 +137,9 @@ export default function App() {
                     <Route path="/student/certificates" element={<StudentCertificates />} />
                     <Route path="/student/access-requests" element={<StudentAccessRequests />} />
                     <Route path="/student/my-university" element={<MyUniversity />} />
-                    <Route path="/student/universities" element={<BrowseUniversities />} />
+                    <Route path="/student/universities" element={<Universities />} />
+                    <Route path="/student/applications" element={<StudentApplications />} />
+                    <Route path="/student/history" element={<StudentHistory />} />
                   </Route>
 
                   {/* University Routes */}
@@ -141,6 +147,7 @@ export default function App() {
                     <Route path="/university/dashboard" element={<UniversityDashboard />} />
                     <Route path="/university/certificates" element={<UniversityCertificates />} />
                     <Route path="/university/enrollments" element={<Enrollments />} />
+                    <Route path="/university/applications" element={<UniversityApplications />} />
                     <Route path="/university/issue-certificate" element={<IssueCertificate />} />
                     <Route path="/university/settings" element={<UniversitySettings />} />
                     <Route path="/university/departments" element={<Navigate to="/university/settings?tab=departments" replace />} />
@@ -167,6 +174,7 @@ export default function App() {
                     <Route path="/admin/profile-change-requests" element={<ProfileChangeRequests />} />
                     <Route path="/admin/activity-logs" element={<AdminActivityLogs />} />
                     <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                    <Route path="/admin/deletion-requests" element={<AdminDeletionRequests />} />
                   </Route>
 
                   <Route path="*" element={<NotFound />} />

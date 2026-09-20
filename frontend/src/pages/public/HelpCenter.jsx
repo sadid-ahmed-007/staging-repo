@@ -82,7 +82,7 @@ function AccordionItem({ question, answer }) {
  >
  <span className="text-lg font-medium text-[var(--text-primary)] group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{question}</span>
  {isOpen ? (
- <ChevronUp className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+ <ChevronUp className="h-5 w-5 text-primary-600 " />
  ) : (
  <ChevronDown className="h-5 w-5 text-[var(--text-muted)] group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
  )}
@@ -115,7 +115,7 @@ export default function HelpCenter() {
  <section>
  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">For Students</h2>
  <div className="bg-[var(--bg-surface)] rounded-3xl p-8 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow duration-300">
- {faqs.students.map((faq, i) => (
+ {faqs.students?.map((faq, i) => (
  <AccordionItem key={i} question={faq.q} answer={faq.a} />
  ))}
  </div>
@@ -124,7 +124,7 @@ export default function HelpCenter() {
  <section>
  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">For Universities</h2>
  <div className="bg-[var(--bg-surface)] rounded-3xl p-8 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow duration-300">
- {faqs.universities.map((faq, i) => (
+ {faqs.universities?.map((faq, i) => (
  <AccordionItem key={i} question={faq.q} answer={faq.a} />
  ))}
  </div>
@@ -133,7 +133,7 @@ export default function HelpCenter() {
  <section>
  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">For Verifiers</h2>
  <div className="bg-[var(--bg-surface)] rounded-3xl p-8 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow duration-300">
- {faqs.verifiers.map((faq, i) => (
+ {faqs.verifiers?.map((faq, i) => (
  <AccordionItem key={i} question={faq.q} answer={faq.a} />
  ))}
  </div>
@@ -142,14 +142,14 @@ export default function HelpCenter() {
  <section>
  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">General</h2>
  <div className="bg-[var(--bg-surface)] rounded-3xl p-8 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow duration-300">
- {faqs.general.map((faq, i) => (
+ {faqs.general?.map((faq, i) => (
  <AccordionItem key={i} question={faq.q} answer={faq.a} />
  ))}
  </div>
  </section>
  </div>
 
- <div className="mt-20 text-center bg-blue-50 dark:bg-blue-900/20 rounded-3xl p-10 border border-blue-100 dark:border-blue-800/30">
+ <div className="mt-20 text-center bg-blue-50 /20 rounded-3xl p-10 border border-blue-100 /30">
  <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">Still have questions?</h2>
  <p className="text-[var(--text-secondary)] mb-8">We're here to help. Reach out to our support team.</p>
  <Link

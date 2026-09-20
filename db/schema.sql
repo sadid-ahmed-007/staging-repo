@@ -21,6 +21,8 @@ CREATE TABLE users (
   pending_email_expires_at TIMESTAMP NULL,
   suspended_at TIMESTAMP NULL DEFAULT NULL,
   suspension_reason TEXT NULL,
+  is_deactivated TINYINT(1) NOT NULL DEFAULT 0,
+  deactivated_at TIMESTAMP NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   deleted_at TIMESTAMP NULL,
@@ -80,6 +82,7 @@ CREATE TABLE students (
   last_name VARCHAR(255) NOT NULL,
   nid_hash VARCHAR(64) NOT NULL UNIQUE,
   nid_encrypted TEXT NULL,
+  avatar_path VARCHAR(500) NULL,
   date_of_birth DATE NOT NULL,
   gender ENUM('Male','Female','Other') NULL,
   phone VARCHAR(30) NULL,
@@ -101,6 +104,7 @@ CREATE TABLE institutions (
   city VARCHAR(120) NOT NULL,
   phone VARCHAR(30) NOT NULL,
   website VARCHAR(255) NULL,
+  avatar_path VARCHAR(500) NULL,
   default_authority_name VARCHAR(255) NULL,
   default_authority_title VARCHAR(255) NULL,
   created_at TIMESTAMP NULL,
@@ -183,6 +187,7 @@ CREATE TABLE verifiers (
   purpose TEXT NOT NULL,
   address TEXT NULL,
   website VARCHAR(255) NULL,
+  avatar_path VARCHAR(500) NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   deleted_at TIMESTAMP NULL,
@@ -540,4 +545,67 @@ CREATE TABLE program_change_requests (
   CONSTRAINT fk_pcr_enrollment FOREIGN KEY (enrollment_id) REFERENCES enrollments(id) ON DELETE CASCADE,
   CONSTRAINT fk_pcr_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
   CONSTRAINT fk_pcr_institution FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE
+);
+
+-- Table: university_applications - Stores student applications to universities
+CREATE TABLE IF NOT EXISTS university_applications (
+    id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id          BIGINT UNSIGNED NOT NULL,
+    university_id       BIGINT UNSIGNED NOT NULL,
+    certificate_level_id BIGINT UNSIGNED NULL,
+    department_id       BIGINT UNSIGNED NULL,
+    program_id          BIGINT UNSIGNED NULL,
+    personal_statement  TEXT NULL,
+    status              ENUM('pending','accepted','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    reviewed_by         BIGINT UNSIGNED NULL,
+    reviewed_at         DATETIME NULL,
+    rejection_reason    TEXT NULL,
+    acceptance_message  TEXT NULL,
+    applied_at          DATETIME NOT NULL DEFAULT NOW(),
+    cancelled_at        DATETIME NULL,
+    created_at          DATETIME NOT NULL DEFAULT NOW(),
+    updated_at          DATETIME NOT NULL DEFAULT NOW() ON UPDATE NOW(),
+    CONSTRAINT fk_ua_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_ua_university FOREIGN KEY (university_id) REFERENCES institutions (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_ua_cert_level FOREIGN KEY (certificate_level_id) REFERENCES certificate_levels (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_ua_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_ua_program FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_ua_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_ua_student_status (student_id, status),
+    INDEX idx_ua_university_status (university_id, status)
+);
+
+-- Table: profile_change_requests - Tracks requests to change locked profile fields
+CREATE TABLE profile_change_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    field_name VARCHAR(100) NOT NULL,
+    current_value TEXT NULL,
+    requested_value TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    supporting_document_path VARCHAR(500) NULL,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    reviewed_by BIGINT UNSIGNED NULL,
+    reviewed_at DATETIME NULL,
+    review_notes TEXT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_user_status (user_id, status)
+);
+
+-- Table: account_deletion_requests - Tracks account deletion requests
+CREATE TABLE account_deletion_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    reason TEXT NULL,
+    status ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    completed_by BIGINT UNSIGNED NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_deletion_user_status (user_id, status),
+    INDEX idx_deletion_status (status)
 );

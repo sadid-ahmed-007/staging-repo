@@ -66,6 +66,13 @@ public class User implements UserDetails {
     @Column(name = "suspension_reason", columnDefinition = "TEXT")
     private String suspensionReason;
 
+    // Account deactivation (self-service or admin)
+    @Column(name = "is_deactivated", nullable = false)
+    private Boolean isDeactivated = false;
+
+    @Column(name = "deactivated_at")
+    private LocalDateTime deactivatedAt;
+
     @Column(name = "remember_token")
     private String rememberToken;
 
@@ -134,6 +141,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        // Disabled accounts cannot log in (Spring Security enforces this automatically)
+        return !Boolean.TRUE.equals(isDeactivated);
     }
 }

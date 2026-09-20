@@ -59,6 +59,9 @@ public class Institution {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "avatar_path", length = 500)
+    private String avatarPath;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 }

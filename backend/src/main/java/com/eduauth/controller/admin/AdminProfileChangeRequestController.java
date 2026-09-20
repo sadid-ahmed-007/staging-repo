@@ -260,7 +260,7 @@ public class AdminProfileChangeRequestController {
         ProfileChangeRequest changeRequest = profileChangeRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile change request not found with id: " + id));
 
-        List<String> docPaths = parseRawDocumentPaths(changeRequest.getSupportingDocuments());
+        List<String> docPaths = parseRawDocumentPaths(changeRequest.getSupportingDocumentPath());
         if (index < 0 || index >= docPaths.size()) {
             return ResponseEntity.status(404).body(Map.of("success", false, "message", "Document not found."));
         }
@@ -387,7 +387,7 @@ public class AdminProfileChangeRequestController {
         map.put("requested_value", req.getRequestedValue());
         map.put("reason", req.getReason());
 
-        List<String> docs = parseRawDocumentPaths(req.getSupportingDocuments());
+        List<String> docs = parseRawDocumentPaths(req.getSupportingDocumentPath());
         map.put("has_documents", !docs.isEmpty());
         map.put("document_count", docs.size());
 
@@ -410,7 +410,7 @@ public class AdminProfileChangeRequestController {
     }
 
     private List<Map<String, Object>> parseDocuments(ProfileChangeRequest req) {
-        List<String> paths = parseRawDocumentPaths(req.getSupportingDocuments());
+        List<String> paths = parseRawDocumentPaths(req.getSupportingDocumentPath());
         List<Map<String, Object>> list = new ArrayList<>();
         for (int i = 0; i < paths.size(); i++) {
             String p = paths.get(i);
@@ -424,13 +424,17 @@ public class AdminProfileChangeRequestController {
         return list;
     }
 
-    private List<String> parseRawDocumentPaths(String json) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
-        } catch (Exception e) {
-            return Collections.emptyList();
+    private List<String> parseRawDocumentPaths(String path) {
+        if (path == null || path.isBlank()) return Collections.emptyList();
+        // If it looks like JSON array, parse it (for backwards compatibility), else return as single item list
+        if (path.trim().startsWith("[")) {
+            try {
+                return objectMapper.readValue(path, new TypeReference<List<String>>() {});
+            } catch (Exception e) {
+                return Collections.emptyList();
+            }
         }
+        return Collections.singletonList(path);
     }
 
     private File resolveDocumentFile(String relativePath) {
