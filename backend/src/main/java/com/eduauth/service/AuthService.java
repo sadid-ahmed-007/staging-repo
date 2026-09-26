@@ -5,6 +5,7 @@ import com.eduauth.exception.BadRequestException;
 import com.eduauth.exception.UnauthorizedException;
 import com.eduauth.model.*;
 import com.eduauth.repository.*;
+import com.eduauth.exception.DeactivatedAccountException;
 import com.eduauth.util.HashUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +28,7 @@ public class AuthService {
     private final VerifierRepository verifierRepository;
     private final UserSettingsRepository userSettingsRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final AccountDeletionRequestRepository accountDeletionRequestRepository;
     
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
@@ -203,7 +205,7 @@ public class AuthService {
 
         // CHECK 6: Verify the account has not been deactivated
         if (Boolean.TRUE.equals(user.getIsDeactivated())) {
-            throw new BadRequestException("This account has been deactivated. Contact support to reactivate.");
+            throw new DeactivatedAccountException("This account has been deactivated.", user.getEmail(), user.getDeactivatedAt());
         }
 
         String token = jwtService.generateToken(user);
@@ -246,6 +248,57 @@ public class AuthService {
         }
     }
     
+    @Transactional
+    public AuthResponse reactivate(ReactivateRequest request, String ipAddress) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new UnauthorizedException("Invalid email or password");
+        }
+
+        if (!Boolean.TRUE.equals(user.getIsDeactivated())) {
+            throw new BadRequestException("Account is not deactivated");
+        }
+
+        if (accountDeletionRequestRepository.existsByUserIdAndStatus(user.getId(), "pending")) {
+            throw new BadRequestException("A deletion request is pending for this account. Contact support to cancel it before reactivating.");
+        }
+
+        user.setIsDeactivated(false);
+        user.setDeactivatedAt(null);
+        userRepository.save(user);
+
+        logActivity(user.getId(), "ACCOUNT_REACTIVATED", "User reactivated account from " + ipAddress);
+
+        String token = jwtService.generateToken(user);
+        
+        Object profile = null;
+        switch (user.getRole()) {
+            case "student":
+                profile = studentRepository.findByUserId(user.getId()).orElse(null);
+                break;
+            case "university":
+                profile = institutionRepository.findByUserId(user.getId()).orElse(null);
+                break;
+            case "verifier":
+                profile = verifierRepository.findByUserId(user.getId()).orElse(null);
+                break;
+        }
+
+        return AuthResponse.builder()
+                .token(token)
+                .user(AuthResponse.UserPayload.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .role(user.getRole())
+                        .isApproved(user.getIsApproved())
+                        .emailVerified(user.getEmailVerifiedAt() != null)
+                        .profile(profile)
+                        .build())
+                .build();
+    }
+
     public AuthResponse getMe(String token) {
         Long userId = jwtService.extractUserId(token);
         User user = userRepository.findById(userId)

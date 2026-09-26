@@ -70,6 +70,9 @@ export default function Settings() {
  const [page, setPage] = useState(1);
  const [showResetModal, setShowResetModal] = useState(false);
  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+ const [deactivatePassword, setDeactivatePassword] = useState('');
+ const [deactivating, setDeactivating] = useState(false);
+ const { logout: contextLogout } = useAuth();
 
  // ─── Preferences tab: local draft state (manual save) ──
  const [prefsDraft, setPrefsDraft] = useState(null);
@@ -246,6 +249,27 @@ export default function Settings() {
  } catch (err) {
  console.error('Failed to reset settings:', err);
  toast.error(err.response?.data?.message || 'Failed to reset settings.');
+ }
+ };
+
+ // ─── Deactivate handler ─────────────────────────────
+ const handleDeactivate = async () => {
+ if (!deactivatePassword) {
+ toast.error('Password is required to deactivate.');
+ return;
+ }
+ setDeactivating(true);
+ try {
+ await api.post('/profile/deactivate', { password: deactivatePassword });
+ toast.success('Account deactivated. See you soon.');
+ await contextLogout();
+ navigate('/login');
+ } catch (err) {
+ toast.error(err.response?.data?.message || 'Failed to deactivate account.');
+ } finally {
+ setDeactivating(false);
+ setShowDeactivateModal(false);
+ setDeactivatePassword('');
  }
  };
 
@@ -699,10 +723,10 @@ export default function Settings() {
  <div className="flex items-center justify-between rounded-lg border border-red-200 p-4 /50">
  <div>
  <h3 className="text-sm font-semibold text-[var(--text-primary)] ">Deactivate Account</h3>
- <p className="mt-0.5 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">Temporarily disable your account. You can reactivate later.</p>
+ <p className="mt-0.5 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">Temporarily disable your account. You can reactivate anytime by logging back in.</p>
  </div>
  <Button variant="danger" onClick={() => setShowDeactivateModal(true)} className="shrink-0">
- Deactivate
+ Deactivate Account
  </Button>
  </div>
  <div className="flex items-center justify-between rounded-lg border border-red-200 p-4 /50">
@@ -729,18 +753,40 @@ export default function Settings() {
  confirmText="Reset Settings"
  variant="danger"
  />
- <ConfirmModal
- isOpen={showDeactivateModal}
- onClose={() => setShowDeactivateModal(false)}
- onConfirm={() => {
- setShowDeactivateModal(false);
- toast.error('Account deactivation requires admin approval. Please contact support.');
- }}
- title="Deactivate Account"
- message="Your account will be temporarily disabled. You will not be able to login until reactivated by an administrator."
- confirmText="Deactivate"
- variant="danger"
+ {/* Deactivate Account Modal */}
+ {showDeactivateModal && (
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+ <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => setShowDeactivateModal(false)}></div>
+ <div className="relative z-50 w-full max-w-md transform overflow-hidden rounded-xl bg-[var(--bg-surface)] p-6 text-left shadow-xl transition-all border border-gray-200 dark:border-gray-800">
+ <div className="flex items-center gap-3 mb-4">
+ <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+ <AlertTriangle className="h-5 w-5 text-red-600" />
+ </div>
+ <h3 className="text-lg font-semibold text-[var(--text-primary)]">Deactivate Account</h3>
+ </div>
+ <p className="text-sm text-[var(--text-secondary)] mb-6">
+ Your account will be temporarily disabled. You can reactivate anytime by logging back in. Please confirm your password to proceed.
+ </p>
+ <div className="mb-6">
+ <Input
+ type="password"
+ placeholder="Enter your password"
+ value={deactivatePassword}
+ onChange={(e) => setDeactivatePassword(e.target.value)}
+ autoFocus
  />
+ </div>
+ <div className="flex justify-end gap-3">
+ <Button variant="secondary" onClick={() => { setShowDeactivateModal(false); setDeactivatePassword(''); }}>
+ Cancel
+ </Button>
+ <Button variant="danger" onClick={handleDeactivate} loading={deactivating}>
+ Deactivate
+ </Button>
+ </div>
+ </div>
+ </div>
+ )}
  </div>
  </DashboardLayout>
  );

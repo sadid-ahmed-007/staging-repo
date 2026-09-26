@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class AccountDeletionRequest {
 
     @Id
@@ -26,8 +25,8 @@ public class AccountDeletionRequest {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    @Column(nullable = false, columnDefinition = "ENUM('pending','completed','cancelled')")
-    private String status = "pending";
+    @Column(nullable = false, columnDefinition = "ENUM('pending','completed','cancelled') DEFAULT 'pending'")
+    private String status;
 
     @CreationTimestamp
     @Column(name = "requested_at", updatable = false)

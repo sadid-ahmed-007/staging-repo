@@ -62,6 +62,20 @@ public class GlobalExceptionHandler {
     }
 
     // ── 403 Forbidden ─────────────────────────────────────────────────────────
+    @ExceptionHandler(DeactivatedAccountException.class)
+    public ResponseEntity<Map<String, Object>> handleDeactivatedAccount(
+            DeactivatedAccountException ex) {
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        body.put("code", "ACCOUNT_DEACTIVATED");
+        body.put("message", ex.getMessage());
+        body.put("email", ex.getEmail());
+        body.put("deactivatedAt", ex.getDeactivatedAt());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    // ── 403 Forbidden ─────────────────────────────────────────────────────────
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(
             AccessDeniedException ex) {

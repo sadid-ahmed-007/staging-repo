@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "verification_logs")
 public class VerificationLog {
@@ -36,8 +35,8 @@ public class VerificationLog {
     @Column(name = "entered_date_of_birth")
     private LocalDate enteredDateOfBirth;
 
-    @Column(name = "matched_by_dob")
-    private Boolean matchedByDob = false;
+    @Column(name = "matched_by_dob", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean matchedByDob;
 
     @Column(name = "verification_result", nullable = false)
     private String verificationResult;
@@ -51,9 +50,8 @@ public class VerificationLog {
     @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
-    @Builder.Default
-    @Column(columnDefinition = "JSON")
-    private String metadata = "{}";
+    @Column(columnDefinition = "JSON DEFAULT '{}'")
+    private String metadata;
 
     @Column(name = "details", columnDefinition = "TEXT")
     private String details;

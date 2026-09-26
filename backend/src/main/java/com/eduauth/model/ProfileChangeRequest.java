@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ProfileChangeRequest {
 
@@ -38,8 +37,8 @@ public class ProfileChangeRequest {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    @Column(nullable = false, columnDefinition = "ENUM('pending','approved','rejected')")
-    private String status = "pending";
+    @Column(nullable = false, columnDefinition = "ENUM('pending','approved','rejected') DEFAULT 'pending'")
+    private String status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")

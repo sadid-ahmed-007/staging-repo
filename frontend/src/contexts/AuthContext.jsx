@@ -36,6 +36,13 @@ export const AuthProvider = ({ children }) => {
     return data;
   }, [fetchSettings]);
 
+  const reactivate = useCallback(async (credentials) => {
+    const data = await authService.reactivate(credentials);
+    setUser(data.user);
+    fetchSettings();
+    return data;
+  }, [fetchSettings]);
+
   const refreshUser = useCallback(async () => {
     const data = await authService.getCurrentUser();
     if (data?.user) {
@@ -63,6 +70,7 @@ export const AuthProvider = ({ children }) => {
     user,
     settings,
     login,
+    reactivate,
     logout,
     refreshUser,
     updateLocalUser,
@@ -72,7 +80,7 @@ export const AuthProvider = ({ children }) => {
     isUniversity: user?.role === 'university',
     isVerifier: user?.role === 'verifier',
     isAdmin: user?.role === 'admin',
-  }), [user, settings, loading, login, logout, refreshUser, updateLocalUser]);
+  }), [user, settings, loading, login, reactivate, logout, refreshUser, updateLocalUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

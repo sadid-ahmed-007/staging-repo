@@ -471,11 +471,10 @@ public class ProfileController {
 
         String reason = body.getOrDefault("reason", "");
 
-        AccountDeletionRequest req = AccountDeletionRequest.builder()
-                .user(user)
-                .reason(reason)
-                .status("pending")
-                .build();
+        AccountDeletionRequest req = new AccountDeletionRequest();
+        req.setUser(user);
+        req.setReason(reason);
+        req.setStatus("pending");
         accountDeletionRequestRepository.save(req);
 
         // Immediately deactivate account

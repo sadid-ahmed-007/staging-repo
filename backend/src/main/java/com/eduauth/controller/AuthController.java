@@ -50,6 +50,13 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/reactivate")
+    public ResponseEntity<?> reactivate(@Valid @RequestBody ReactivateRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = httpRequest.getRemoteAddr();
+        AuthResponse response = authService.reactivate(request, ipAddress);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {

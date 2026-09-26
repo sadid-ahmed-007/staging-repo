@@ -245,17 +245,16 @@ public class VerifyController {
             enteredDob = LocalDate.parse(dateOfBirthStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         } catch (Exception ignored) { }
 
-        VerificationLog log = VerificationLog.builder()
-                .certificateId(certificateId)
-                .verifierId(verifierId)
-                .serial(serial)
-                .enteredDateOfBirth(enteredDob)
-                .matchedByDob(matchedByDob)
-                .verificationResult(result)
-                .ipAddress(httpRequest != null ? httpRequest.getRemoteAddr() : null)
-                .userAgent(httpRequest != null ? httpRequest.getHeader("User-Agent") : null)
-                .details(details)
-                .build();
+        VerificationLog log = new VerificationLog();
+        log.setCertificateId(certificateId);
+        log.setVerifierId(verifierId);
+        log.setSerial(serial);
+        log.setEnteredDateOfBirth(enteredDob);
+        log.setMatchedByDob(matchedByDob);
+        log.setVerificationResult(result);
+        log.setIpAddress(httpRequest != null ? httpRequest.getRemoteAddr() : null);
+        log.setUserAgent(httpRequest != null ? httpRequest.getHeader("User-Agent") : null);
+        log.setDetails(details);
 
         verificationLogRepository.save(log);
     }
