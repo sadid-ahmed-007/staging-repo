@@ -889,6 +889,48 @@ function StudentPreferences({ draft, updateDraft }) {
  </div>
  </Card>
 
+ {/* Certificate Verification Defaults (new certificates) */}
+ <Card>
+ <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+ <Shield className="h-5 w-5 text-[var(--text-muted)]" />
+ Verification Defaults
+ </h2>
+ <p className="mt-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+ Privacy settings applied to all <strong>new</strong> certificates issued to you.
+ Existing certificates keep their own individual settings.
+ </p>
+ <div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">
+ <ToggleSwitch
+ label="Share new certificates publicly by default"
+ description="New certificates will be publicly viewable and verifiable when first issued."
+ checked={draft.certificateDefaults?.isPubliclyShareable ?? true}
+ onChange={(v) => updateDraft('certificateDefaults.isPubliclyShareable', v)}
+ />
+ <ToggleSwitch
+ label="Allow anonymous verification by default"
+ description="Anyone with the serial number + date of birth can verify without logging in."
+ checked={draft.certificateDefaults?.allowAnonymousVerification ?? true}
+ onChange={(v) => updateDraft('certificateDefaults.allowAnonymousVerification', v)}
+ />
+ <ToggleSwitch
+ label="Notify me when a certificate is verified"
+ description="Receive email + in-app notification when someone verifies a certificate."
+ checked={draft.certificateDefaults?.notifyOnVerification ?? true}
+ onChange={(v) => updateDraft('certificateDefaults.notifyOnVerification', v)}
+ />
+ {(draft.certificateDefaults?.notifyOnVerification ?? true) && (
+ <div className="py-2 pl-6 border-l-2 border-gray-200 dark:border-gray-700 ml-1">
+ <ToggleSwitch
+ label="Only notify for anonymous verifications"
+ description="Skip the notification when a known verifier (logged in) checks your certificate."
+ checked={draft.certificateDefaults?.notifyOnAnonymousOnly ?? false}
+ onChange={(v) => updateDraft('certificateDefaults.notifyOnAnonymousOnly', v)}
+ />
+ </div>
+ )}
+ </div>
+ </Card>
+
  <Card>
  <h2 className="text-lg font-semibold text-[var(--text-primary)] ">Enrollment Preferences</h2>
  <div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">

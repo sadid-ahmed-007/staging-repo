@@ -7,6 +7,7 @@ import com.eduauth.repository.UserRepository;
 import com.eduauth.repository.VerificationLogRepository;
 import com.eduauth.service.EncryptionService;
 import com.eduauth.service.SerialGeneratorService;
+import com.eduauth.service.VerificationNotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,7 @@ public class VerifyController {
     private final CertificateRepository certificateRepository;
     private final VerificationLogRepository verificationLogRepository;
     private final EncryptionService encryptionService;
+    private final VerificationNotificationService verificationNotificationService;
 
     // ── System stats for landing page ────────────────────────────────────────
 
@@ -98,12 +100,32 @@ public class VerifyController {
 
     // ── Core verification logic ──────────────────────────────────────────────
 
+    /**
+     * Central verification logic used by public endpoint, share-link endpoint,
+     * and VerifierVerifyController.
+     *
+     * @param verifierId      null = anonymous (public); non-null = logged-in verifier (Verifier.id)
+     * @param hasActiveGrant  true when caller already verified an active access grant exists
+     *                        (used by verifier path to bypass anonymous block)
+     */
     public ResponseEntity<?> doVerify(
             String serial,
             String dateOfBirthStr,
             Long verifierId,
             boolean isFromShareLink,
             HttpServletRequest httpRequest) {
+        return doVerify(serial, dateOfBirthStr, verifierId, isFromShareLink, false, httpRequest);
+    }
+
+    public ResponseEntity<?> doVerify(
+            String serial,
+            String dateOfBirthStr,
+            Long verifierId,
+            boolean isFromShareLink,
+            boolean hasActiveGrant,
+            HttpServletRequest httpRequest) {
+
+        boolean isAnonymous = (verifierId == null);
 
         // Step 1: Validate checksum
         if (!SerialGeneratorService.validateChecksum(serial)) {
@@ -120,10 +142,7 @@ public class VerifyController {
         if (certOpt.isEmpty()) {
             logVerification(null, serial, dateOfBirthStr, false, "not_found",
                     "Certificate not found", verifierId, httpRequest);
-            return ResponseEntity.status(404).body(Map.of(
-                    "success", false,
-                    "verified", false,
-                    "message", "Certificate not found with this serial number"));
+            return notFound();
         }
 
         Certificate certificate = certOpt.get();
@@ -140,7 +159,16 @@ public class VerifyController {
                     "message", "This certificate is currently set to private by the student."));
         }
 
-        // Step 3: Check if revoked
+        // Step 3 (new): Anonymous verification block
+        // If allowAnonymousVerification = false AND request is anonymous AND no active grant → not_found
+        // (Do not reveal that the certificate exists — privacy protection)
+        if (isAnonymous && !hasActiveGrant
+                && Boolean.FALSE.equals(certificate.getAllowAnonymousVerification())) {
+            // Do NOT log to verification_logs — do not reveal cert exists
+            return notFound();
+        }
+
+        // Step 3 (original): Check if revoked
         if (certificate.getRevokedAt() != null) {
             logVerification(certificate.getId(), serial, dateOfBirthStr, false, "revoked",
                     "Certificate has been revoked", verifierId, httpRequest);
@@ -173,7 +201,7 @@ public class VerifyController {
         }
 
         // Step 5: Check if publicly shareable (Post-DOB check)
-        // Share links bypass this privacy check because the student explicitly generated 
+        // Share links bypass this privacy check because the student explicitly generated
         // the link with an encrypted DOB to share with someone. Manual verification is blocked.
         if (!isFromShareLink && !Boolean.TRUE.equals(certificate.getIsPubliclyShareable())) {
             logVerification(certificate.getId(), serial, dateOfBirthStr, true, "private_certificate",
@@ -186,9 +214,12 @@ public class VerifyController {
                             + "The student has restricted access to this certificate."));
         }
 
-        // Step 6: Success!
-        logVerification(certificate.getId(), serial, dateOfBirthStr, true, "success",
+        // Step 6: Success! — log and notify
+        logVerification(certificate.getId(), serial, dateOfBirthStr, true, "verified",
                 "Certificate verified successfully", verifierId, httpRequest);
+
+        // Step 7: Post-verification notifications (email + in-app)
+        verificationNotificationService.notifyStudent(certificate, verifierId);
 
         Map<String, Object> certDetails = buildCertificateDetails(certificate);
 
@@ -257,5 +288,15 @@ public class VerifyController {
         log.setDetails(details);
 
         verificationLogRepository.save(log);
+    }
+
+    // ── Helper: uniform "not found" response ────────────────────────────────
+
+    private ResponseEntity<?> notFound() {
+        return ResponseEntity.status(404).body(Map.of(
+                "success", false,
+                "verified", false,
+                "status", "not_found",
+                "message", "No certificate found with the provided information."));
     }
 }

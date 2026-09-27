@@ -5,6 +5,8 @@ import com.eduauth.exception.BadRequestException;
 import com.eduauth.exception.ResourceNotFoundException;
 import com.eduauth.model.*;
 import com.eduauth.repository.*;
+import com.eduauth.service.NotificationService;
+import com.eduauth.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,6 +41,7 @@ public class EnrollmentService {
     private final NotificationService notificationService;
     private final CertificateRepository certificateRepository;
     private final com.eduauth.repository.UniversityApplicationRepository universityApplicationRepository;
+    private final EmailService emailService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // ENROLL STUDENT
@@ -212,13 +215,20 @@ public class EnrollmentService {
         // Notify student: ENROLLMENT_CONFIRMED
         final Long studentUserId = studentUser.getId();
         final Long enrollmentId  = enrollment.getId();
+        
+        String uniName = institution != null ? institution.getName() : "University";
+        String studentName = (student.getFirstName() + " " + student.getLastName()).trim();
+        emailService.sendEnrollmentConfirmed(studentUserId, studentUser.getEmail(), 
+                studentName, uniName, request.getProgram(), request.getDepartment(), 
+                request.getBatch() != null ? request.getBatch() : "N/A", 
+                enrollmentNumber, request.getExpectedGraduationDate() != null ? request.getExpectedGraduationDate().toString() : "N/A");
+                
         notificationService.createNotification(
                 studentUserId,
                 "ENROLLMENT_CONFIRMED",
                 "Enrollment Confirmed",
-                "Your enrollment has been confirmed" +
-                        (institution != null ? " at " + institution.getName() : "") + ".",
-                "/student/enrollment",
+                "You are now enrolled at " + uniName,
+                "/student/my-university",
                 Map.of("enrollmentId", enrollmentId)
         );
 
@@ -418,12 +428,19 @@ public class EnrollmentService {
         // Notify student: GRADUATION_EXTENDED
         Student studentForNotif = studentRepository.findById(enrollment.getStudentId()).orElse(null);
         if (studentForNotif != null && studentForNotif.getUser() != null) {
+            Institution institution = institutionRepository.findById(institutionId).orElse(null);
+            String uniName = institution != null ? institution.getName() : "University";
+            String studentName = (studentForNotif.getFirstName() + " " + studentForNotif.getLastName()).trim();
+            
+            emailService.sendGraduationExtended(studentForNotif.getUser().getId(), studentForNotif.getUser().getEmail(), 
+                    studentName, uniName, newDate.toString(), request.getReason());
+            
             notificationService.createNotification(
                     studentForNotif.getUser().getId(),
                     "GRADUATION_EXTENDED",
                     "Graduation Date Extended",
-                    "Your expected graduation date has been extended to " + newDate + ".",
-                    "/student/enrollment",
+                    "Your graduation date has been updated to " + newDate,
+                    "/student/my-university",
                     Map.of("enrollmentId", id, "newGraduationDate", newDate.toString())
             );
         }
@@ -477,6 +494,22 @@ public class EnrollmentService {
 
         Institution institution = institutionRepository.findById(enrollment.getInstitutionId()).orElse(null);
         User studentUser = userRepository.findById(studentId).orElse(null);
+        
+        if (institution != null && institution.getUser() != null && studentUser != null) {
+            String studentName = (student.getFirstName() + " " + student.getLastName()).trim();
+            emailService.sendWithdrawalRequested(institution.getUser().getId(), institution.getUser().getEmail(), 
+                    studentName, request.getReason());
+            
+            notificationService.createNotification(
+                    institution.getUser().getId(),
+                    "WITHDRAWAL_REQUESTED",
+                    "Withdrawal Request",
+                    studentName + " requested withdrawal",
+                    "/university/enrollments?status=withdrawal_requested",
+                    Map.of("enrollmentId", enrollmentId)
+            );
+        }
+
         EnrollmentResponse resp = toResponse(enrollment, studentUser, institution, wr);
         resp.setStatus("withdrawal_requested");
         return resp;
@@ -562,31 +595,41 @@ public class EnrollmentService {
 
         // Notify student: WITHDRAWAL_APPROVED or WITHDRAWAL_REJECTED
         Student studentForNotif = studentRepository.findById(enrollment.getStudentId()).orElse(null);
+        Institution institution = institutionRepository.findById(institutionId).orElse(null);
+        String uniName = institution != null ? institution.getName() : "University";
+
         if (studentForNotif != null && studentForNotif.getUser() != null) {
+            String studentName = (studentForNotif.getFirstName() + " " + studentForNotif.getLastName()).trim();
+            
             if (request.isApproved()) {
+                emailService.sendWithdrawalApproved(studentForNotif.getUser().getId(), studentForNotif.getUser().getEmail(),
+                        studentName, uniName, "Your request was approved.");
+                        
                 notificationService.createNotification(
                         studentForNotif.getUser().getId(),
                         "WITHDRAWAL_APPROVED",
                         "Withdrawal Approved",
-                        "Your withdrawal request has been approved.",
-                        "/student/enrollment",
+                        "Your withdrawal has been approved",
+                        "/student/my-university",
                         Map.of("enrollmentId", enrollmentId)
                 );
             } else {
+                String rejectReason = request.getResponseMessage() != null && !request.getResponseMessage().isBlank()
+                                        ? request.getResponseMessage() : "No reason provided.";
+                emailService.sendWithdrawalRejected(studentForNotif.getUser().getId(), studentForNotif.getUser().getEmail(),
+                        studentName, uniName, rejectReason);
+                        
                 notificationService.createNotification(
                         studentForNotif.getUser().getId(),
                         "WITHDRAWAL_REJECTED",
                         "Withdrawal Rejected",
-                        "Your withdrawal request has been rejected" +
-                                (request.getResponseMessage() != null && !request.getResponseMessage().isBlank()
-                                        ? ": " + request.getResponseMessage() : "."),
-                        "/student/enrollment",
+                        "Your withdrawal request was rejected",
+                        "/student/access-requests",
                         Map.of("enrollmentId", enrollmentId)
                 );
             }
         }
 
-        Institution institution = institutionRepository.findById(institutionId).orElse(null);
         User studentUser = getStudentUser(enrollment.getStudentId());
         return toResponse(enrollment, studentUser, institution,
                 request.isApproved() ? null : wr);
@@ -623,19 +666,25 @@ public class EnrollmentService {
 
         // Notify student: WITHDRAWAL_REQUESTED (university-initiated direct withdrawal)
         Student studentForNotif = studentRepository.findById(enrollment.getStudentId()).orElse(null);
+        Institution institution = institutionRepository.findById(institutionId).orElse(null);
+        
         if (studentForNotif != null && studentForNotif.getUser() != null) {
+            String uniName = institution != null ? institution.getName() : "University";
+            String studentName = (studentForNotif.getFirstName() + " " + studentForNotif.getLastName()).trim();
+            
+            emailService.sendStudentWithdrawn(studentForNotif.getUser().getId(), studentForNotif.getUser().getEmail(),
+                    studentName, uniName, reason != null ? reason : "No reason provided.");
+                    
             notificationService.createNotification(
                     studentForNotif.getUser().getId(),
-                    "WITHDRAWAL_REQUESTED",
+                    "STUDENT_WITHDRAWN",
                     "Withdrawal Processed",
-                    "Your enrollment has been withdrawn by the university" +
-                            (reason != null && !reason.isBlank() ? ": " + reason : "."),
-                    "/student/enrollment",
+                    "You have been withdrawn from " + uniName,
+                    "/student/my-university",
                     Map.of("enrollmentId", enrollmentId)
             );
         }
 
-        Institution institution = institutionRepository.findById(institutionId).orElse(null);
         User studentUser = getStudentUser(enrollment.getStudentId());
         return toResponse(enrollment, studentUser, institution, null);
     }

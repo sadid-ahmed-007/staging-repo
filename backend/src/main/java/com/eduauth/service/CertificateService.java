@@ -58,13 +58,19 @@ public class CertificateService {
     private final EncryptionService encryptionService;
     private final CertificateRepository certificateRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final EmailService emailService;
+    private final NotificationService notificationService;
 
     public CertificateService(EncryptionService encryptionService,
                               CertificateRepository certificateRepository,
-                              ActivityLogRepository activityLogRepository) {
+                              ActivityLogRepository activityLogRepository,
+                              EmailService emailService,
+                              NotificationService notificationService) {
         this.encryptionService = encryptionService;
         this.certificateRepository = certificateRepository;
         this.activityLogRepository = activityLogRepository;
+        this.emailService = emailService;
+        this.notificationService = notificationService;
     }
 
     // ── Revocation ────────────────────────────────────────────────────────────
@@ -112,6 +118,22 @@ public class CertificateService {
         String actor = "admin".equals(userRole) ? "admin" : "university";
         log.setDescription("Certificate " + cert.getSerial() + " revoked by " + actor + ". Reason: " + reason);
         activityLogRepository.save(log);
+
+        if (cert.getStudent() != null && cert.getStudent().getUser() != null) {
+            String uniName = cert.getInstitution() != null ? cert.getInstitution().getName() : "University";
+            String studentName = (cert.getStudent().getFirstName() + " " + cert.getStudent().getLastName()).trim();
+            emailService.sendCertificateRevoked(cert.getStudent().getUser().getId(), cert.getStudent().getUser().getEmail(),
+                    studentName, cert.getCertificateName(), cert.getSerial(), actor, reason);
+                    
+            notificationService.createNotification(
+                    cert.getStudent().getUser().getId(),
+                    "CERTIFICATE_REVOKED",
+                    "Certificate Revoked",
+                    "Your certificate (" + cert.getCertificateName() + ") has been revoked.",
+                    "/student/certificates",
+                    java.util.Map.of("certificateId", cert.getId())
+            );
+        }
 
         return cert;
     }
@@ -167,6 +189,22 @@ public class CertificateService {
         log.setDescription("Certificate " + cert.getSerial() + " revalidated by " + actor
                 + (reason != null && !reason.isBlank() ? ". Reason: " + reason : ""));
         activityLogRepository.save(log);
+
+        if (cert.getStudent() != null && cert.getStudent().getUser() != null) {
+            String uniName = cert.getInstitution() != null ? cert.getInstitution().getName() : "University";
+            String studentName = (cert.getStudent().getFirstName() + " " + cert.getStudent().getLastName()).trim();
+            emailService.sendCertificateRevalidated(cert.getStudent().getUser().getId(), cert.getStudent().getUser().getEmail(),
+                    studentName, cert.getCertificateName(), cert.getSerial());
+                    
+            notificationService.createNotification(
+                    cert.getStudent().getUser().getId(),
+                    "CERTIFICATE_REVALIDATED",
+                    "Certificate Revalidated",
+                    "Your certificate (" + cert.getCertificateName() + ") has been restored.",
+                    "/student/certificates",
+                    java.util.Map.of("certificateId", cert.getId())
+            );
+        }
 
         return cert;
     }

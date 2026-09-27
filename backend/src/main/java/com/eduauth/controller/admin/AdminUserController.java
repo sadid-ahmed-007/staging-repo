@@ -132,15 +132,15 @@ public class AdminUserController {
             name = user.getVerifier().getCompanyName();
         }
         
-        emailService.sendApprovalEmail(user.getEmail(), name);
+        emailService.sendAccountApproved(user.getId(), user.getEmail(), name);
 
         // Notify user: ACCOUNT_APPROVED
         notificationService.createNotification(
                 id,
                 "ACCOUNT_APPROVED",
                 "Account Approved",
-                "Your account has been approved. You can now log in and use the platform.",
-                "/dashboard",
+                "Your account has been approved. Welcome!",
+                "/" + user.getRole() + "/dashboard",
                 Map.of("userId", id)
         );
 
@@ -167,12 +167,14 @@ public class AdminUserController {
         log.setDescription("Account reactivated by admin");
         activityLogRepository.save(log);
 
+        emailService.sendAccountReactivated(id, target.getEmail(), "User");
+
         notificationService.createNotification(
                 id,
-                "ACCOUNT_APPROVED",
+                "ACCOUNT_REACTIVATED",
                 "Account Reactivated",
-                "Your account has been reactivated by an administrator. You can now log in.",
-                "/login",
+                "Your account is active again.",
+                "/" + target.getRole() + "/dashboard",
                 Map.of()
         );
 

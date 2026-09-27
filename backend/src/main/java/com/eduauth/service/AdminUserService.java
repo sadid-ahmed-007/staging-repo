@@ -30,6 +30,8 @@ public class AdminUserService {
     private final ActivityLogRepository activityLogRepository;
     private final AccessGrantRepository accessGrantRepository;
     private final AccessService accessService;
+    private final EmailService emailService;
+    private final NotificationService notificationService;
 
     public Page<AdminUserListDto> getUsers(String status, String role, String search, int page, int size) {
         Specification<User> spec = UserSpecification.withFilters(status, role, search);
@@ -132,6 +134,8 @@ public class AdminUserService {
         log.setAction("USER_SUSPENDED");
         log.setDescription("User account was suspended. Reason: " + requestDto.getReason());
         activityLogRepository.save(log);
+
+        emailService.sendAccountSuspended(user.getId(), user.getEmail(), "User", requestDto.getReason());
     }
 
     public void unsuspendUser(Long id) {
@@ -147,5 +151,15 @@ public class AdminUserService {
         log.setAction("USER_UNSUSPENDED");
         log.setDescription("User account was unsuspended");
         activityLogRepository.save(log);
+
+        emailService.sendAccountReactivated(user.getId(), user.getEmail(), "User");
+        notificationService.createNotification(
+                id,
+                "ACCOUNT_REACTIVATED",
+                "Account Reactivated",
+                "Your account is active again.",
+                "/" + user.getRole() + "/dashboard",
+                java.util.Map.of()
+        );
     }
 }

@@ -14,10 +14,12 @@ import SearchBar from '../../components/shared/SearchBar';
 import SelectField from '../../components/shared/SelectField';
 import ToggleSwitch from '../../components/shared/ToggleSwitch';
 import CertificateDetailModal from '../../components/certificates/CertificateDetailModal';
+import CertificatePrivacyModal from '../../components/certificates/CertificatePrivacyModal';
+import CertificatePrivacyModal from '../../components/certificates/CertificatePrivacyModal';
 import api from '../../services/api';
 import { formatDate, cn } from '../../utils/helpers';
 import { downloadCertificatePDF, previewCertificatePDF } from '../../services/certificateService';
-import { FileText, Download, RefreshCw, Loader2, Globe, Shield, Award, X } from 'lucide-react';
+import { FileText, Download, RefreshCw, Loader2, Globe, Shield, Award, X, Settings2 } from 'lucide-react';
 
 export default function StudentCertificates() {
  const [certificates, setCertificates] = useState([]);
@@ -26,6 +28,9 @@ export default function StudentCertificates() {
  const [downloadingId, setDownloadingId] = useState(null);
  const [selectedCertificate, setSelectedCertificate] = useState(null);
  const [detailsLoading, setDetailsLoading] = useState(false);
+ 
+ // Privacy modal state
+ const [privacyCertificate, setPrivacyCertificate] = useState(null);
  
  const [copiedSerial, setCopiedSerial] = useState(null);
  const [copiedLink, setCopiedLink] = useState(false);
@@ -200,6 +205,16 @@ export default function StudentCertificates() {
  console.error('Failed to toggle visibility:', err);
  toast.error(err.response?.data?.message || 'Failed to update certificate visibility');
  }
+ };
+
+ const handlePrivacySaved = (updatedPrivacy) => {
+  if (!privacyCertificate) return;
+  const id = privacyCertificate.id;
+  setCertificates((current) =>
+   current.map((c) =>
+    c.id === id ? { ...c, ...updatedPrivacy } : c
+   )
+  );
  };
 
  return (
@@ -420,6 +435,15 @@ export default function StudentCertificates() {
  onChange={() => toggleVisibility(certificate.id, certificate.isPubliclyShareable)}
  label="Public"
  />
+ <button
+ type="button"
+ id={`privacy-btn-${certificate.id}`}
+ onClick={(e) => { e.stopPropagation(); setPrivacyCertificate(certificate); }}
+ className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--brand)] hover:bg-[var(--brand-light)]/10 transition"
+ title="Privacy settings"
+ >
+ <Settings2 className="h-4 w-4" />
+ </button>
  </div>
  <Button
  variant="secondary"
@@ -451,6 +475,17 @@ export default function StudentCertificates() {
  onDownloadPdf={handleDownloadPdf}
  onPreviewPdf={handlePreviewPdf}
  role="student"
+ />
+
+ <CertificatePrivacyModal
+ open={!!privacyCertificate}
+ onClose={() => setPrivacyCertificate(null)}
+ certificate={privacyCertificate}
+ onSaved={(updatedPrivacy) => {
+  if (!privacyCertificate) return;
+  const id = privacyCertificate.id;
+  setCertificates((current) => current.map((c) => c.id === id ? { ...c, ...updatedPrivacy } : c));
+ }}
  />
  </DashboardLayout>
  );

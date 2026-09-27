@@ -3,9 +3,12 @@ package com.eduauth.controller.student;
 import com.eduauth.model.Certificate;
 import com.eduauth.model.Student;
 import com.eduauth.model.User;
+import com.eduauth.model.UserSettings;
 import com.eduauth.repository.CertificateRepository;
 import com.eduauth.repository.StudentRepository;
+import com.eduauth.repository.UserSettingsRepository;
 import com.eduauth.service.CertificateService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,10 +27,11 @@ import java.util.stream.Collectors;
 /**
  * Student certificate endpoints.
  *
- * GET  /api/student/certificates                     → paginated list (filter: all/public/private)
- * GET  /api/student/certificates/{id}               → full details + share link
- * GET  /api/student/certificates/{id}/pdf           → PDF download with QR code
- * PATCH /api/student/certificates/{id}/visibility   → toggle isPubliclyShareable
+ * GET   /api/student/certificates                      → paginated list (filter: all/public/private)
+ * GET   /api/student/certificates/{id}                → full details + share link
+ * GET   /api/student/certificates/{id}/pdf            → PDF download with QR code
+ * PATCH /api/student/certificates/{id}/visibility     → toggle isPubliclyShareable
+ * PATCH /api/student/certificates/{id}/privacy        → update all four privacy fields (partial)
  */
 @RestController
 @RequestMapping("/api/student/certificates")
@@ -38,6 +42,8 @@ public class StudentCertificateController {
     private final StudentRepository       studentRepository;
     private final CertificateRepository   certificateRepository;
     private final CertificateService      certificateService;
+    private final UserSettingsRepository  userSettingsRepository;
+    private final ObjectMapper            objectMapper;
 
     // ── GET /api/student/certificates ────────────────────────────────────────
 
@@ -70,9 +76,12 @@ public class StudentCertificateController {
                     m.put("cgpa",                  c.getCgpa());
                     m.put("degreeClass",           c.getDegreeClass());
                     m.put("issueDate",             c.getIssueDate());
-                    m.put("status",                c.isRevoked() ? "revoked" : "active");
-                    m.put("isPubliclyShareable",   c.getIsPubliclyShareable());
-                    m.put("createdAt",             c.getCreatedAt());
+                    m.put("status",                        c.isRevoked() ? "revoked" : "active");
+                    m.put("isPubliclyShareable",            c.getIsPubliclyShareable());
+                    m.put("allowAnonymousVerification",     c.getAllowAnonymousVerification());
+                    m.put("notifyOnVerification",           c.getNotifyOnVerification());
+                    m.put("notifyOnAnonymousOnly",          c.getNotifyOnAnonymousOnly());
+                    m.put("createdAt",                     c.getCreatedAt());
                     return m;
                 })
                 .collect(Collectors.toList());
@@ -156,7 +165,10 @@ public class StudentCertificateController {
         data.put("authorityName",       cert.getAuthorityName());
         data.put("authorityTitle",      cert.getAuthorityTitle());
         data.put("status",              cert.isRevoked() ? "revoked" : "active");
-        data.put("isPubliclyShareable", cert.getIsPubliclyShareable());
+        data.put("isPubliclyShareable",           cert.getIsPubliclyShareable());
+        data.put("allowAnonymousVerification",    cert.getAllowAnonymousVerification());
+        data.put("notifyOnVerification",          cert.getNotifyOnVerification());
+        data.put("notifyOnAnonymousOnly",         cert.getNotifyOnAnonymousOnly());
         data.put("revokedAt",           cert.getRevokedAt());
         data.put("revocationReason",    cert.getRevocationReason());
         data.put("createdAt",           cert.getCreatedAt());
@@ -231,6 +243,64 @@ public class StudentCertificateController {
         ));
     }
 
+    // ── PATCH /api/student/certificates/{id}/privacy ─────────────────────────
+
+    /**
+     * Partial privacy settings update for a specific certificate.
+     * Only fields present in the request body are updated (null fields are ignored).
+     *
+     * Body (all optional):
+     *   isPubliclyShareable         (boolean)
+     *   allowAnonymousVerification  (boolean)
+     *   notifyOnVerification        (boolean)
+     *   notifyOnAnonymousOnly       (boolean)
+     */
+    @PatchMapping("/{id}/privacy")
+    @Transactional
+    public ResponseEntity<?> updatePrivacy(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+
+        Student student = studentRepository.findByUserId(user.getId()).orElse(null);
+        if (student == null) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("success", false, "message", "Student profile not found"));
+        }
+
+        Certificate cert = certificateRepository.findById(id).orElse(null);
+        if (cert == null || !cert.getStudentId().equals(student.getId())) {
+            return ResponseEntity.status(cert == null ? 404 : 403)
+                    .body(Map.of("success", false,
+                                 "message", cert == null ? "Certificate not found" : "Access denied"));
+        }
+
+        // Partial update — only fields present in body are changed
+        if (body.containsKey("isPubliclyShareable")) {
+            cert.setIsPubliclyShareable(Boolean.parseBoolean(body.get("isPubliclyShareable").toString()));
+        }
+        if (body.containsKey("allowAnonymousVerification")) {
+            cert.setAllowAnonymousVerification(Boolean.parseBoolean(body.get("allowAnonymousVerification").toString()));
+        }
+        if (body.containsKey("notifyOnVerification")) {
+            cert.setNotifyOnVerification(Boolean.parseBoolean(body.get("notifyOnVerification").toString()));
+        }
+        if (body.containsKey("notifyOnAnonymousOnly")) {
+            cert.setNotifyOnAnonymousOnly(Boolean.parseBoolean(body.get("notifyOnAnonymousOnly").toString()));
+        }
+
+        certificateRepository.save(cert);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("message", "Privacy settings updated");
+        result.put("isPubliclyShareable",          cert.getIsPubliclyShareable());
+        result.put("allowAnonymousVerification",   cert.getAllowAnonymousVerification());
+        result.put("notifyOnVerification",         cert.getNotifyOnVerification());
+        result.put("notifyOnAnonymousOnly",        cert.getNotifyOnAnonymousOnly());
+        return ResponseEntity.ok(result);
+    }
+
     // ── GET /api/student/certificates/{id}/share-link ─────────────────────────
 
     /**
@@ -270,4 +340,3 @@ public class StudentCertificateController {
         ));
     }
 }
-

@@ -67,4 +67,7 @@ public class AccessGrant {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+    
+    @Column(name = "notified_3_days_before")
+    private Boolean notified3DaysBefore = false;
 }

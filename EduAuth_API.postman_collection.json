@@ -1,0 +1,4828 @@
+{
+  "info": {
+    "name": "EduAuth Registry API",
+    "description": "EduAuth Registry API Collection\n\nDEMO CREDENTIALS (pre-seeded in database):\n  Admin:      admin@eduauth.com / admin123\n  Student:    student@test.com / password123\n  University: demo@uiu.ac.bd / password123\n  Verifier:   verifier@company.com / password123\n\nHOW TO START:\n  1. Open folder '\ud83d\ude80 Start Here \u2014 Login as Each Role'\n  2. Run all 4 login requests\n  3. Tokens are saved automatically as collection variables\n  4. All other requests will use these tokens automatically\n\nFOR A FULL DEMO:\n  Open folder '\ud83e\uddea Test Flows' and run flows in order.\n  Each flow has numbered steps and descriptions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "student_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "university_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "verifier_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "student_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "certificate_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "enrollment_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "application_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "access_request_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "\ud83d\ude80 Start Here \u2014 Login as Each Role",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run this first. Token is saved automatically.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@eduauth.com\",\n  \"password\": \"admin123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set(\"admin_token\", json.data.token || json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run this to get student token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@test.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set(\"student_token\", json.data.token || json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (University)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run this to get university token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@uiu.ac.bd\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set(\"university_token\", json.data.token || json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Verifier)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run this to get verifier token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"verifier@company.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set(\"verifier_token\", json.data.token || json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new student",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"STUDENT\",\n  \"email\": \"newstudent@test.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"nationalId\": \"NID12345\",\n  \"dateOfBirth\": \"2000-01-01\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register (University)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new university",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"UNIVERSITY\",\n  \"email\": \"newuni@test.com\",\n  \"password\": \"password123\",\n  \"institutionName\": \"Test Uni\",\n  \"registrationNumber\": \"REG123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register (Verifier)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new verifier",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"VERIFIER\",\n  \"email\": \"newverifier@test.com\",\n  \"password\": \"password123\",\n  \"organizationName\": \"Test Org\",\n  \"designation\": \"Manager\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verify-email",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify-email"
+              ]
+            },
+            "description": "Verify email with OTP",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newstudent@test.com\",\n  \"code\": \"123456\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/resend-verification",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "resend-verification"
+              ]
+            },
+            "description": "Resend OTP",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newstudent@test.com\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout from current session",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{student_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Get current user profile",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{student_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public (No Auth)",
+      "item": [
+        {
+          "name": "Verify Certificate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "verify"
+              ]
+            },
+            "description": "Verify certificate using serial and DOB. Query params: ?serial=...&dob=...",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Share Link",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/verify-link",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "verify-link"
+              ]
+            },
+            "description": "Verify via share link. Query params: ?token=...",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Universities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/universities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "universities"
+              ]
+            },
+            "description": "List all active universities",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Student",
+      "item": [
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Get Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "dashboard"
+                  ]
+                },
+                "description": "Get student dashboard statistics",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Certificates",
+          "item": [
+            {
+              "name": "List Certificates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates"
+                  ]
+                },
+                "description": "List student's certificates",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Certificate Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{certificate_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{{certificate_id}}}}"
+                  ]
+                },
+                "description": "Get specific certificate detail",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Download PDF",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{certificate_id}}/pdf",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "pdf"
+                  ]
+                },
+                "description": "Download certificate PDF",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Share Link",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{certificate_id}}/share-link",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "share-link"
+                  ]
+                },
+                "description": "Get secure share link",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Privacy Settings",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{certificate_id}}/privacy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "privacy"
+                  ]
+                },
+                "description": "Update privacy settings",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isPublic\": true\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Access Requests",
+          "item": [
+            {
+              "name": "List Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/access-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-requests"
+                  ]
+                },
+                "description": "List pending access requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Approve Request",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/access-requests/{{access_request_id}}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-requests",
+                    "{{{{access_request_id}}}}",
+                    "approve"
+                  ]
+                },
+                "description": "Approve an access request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reject Request",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/access-requests/{{access_request_id}}/reject",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-requests",
+                    "{{{{access_request_id}}}}",
+                    "reject"
+                  ]
+                },
+                "description": "Reject an access request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Grants",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/access-grants",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-grants"
+                  ]
+                },
+                "description": "List active access grants",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revoke Grant",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/access-grants/{grant_id}/revoke",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-grants",
+                    "{{grant_id}}",
+                    "revoke"
+                  ]
+                },
+                "description": "Revoke an active grant",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Enrollment",
+          "item": [
+            {
+              "name": "Current Enrollments",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/enrollments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "enrollments"
+                  ]
+                },
+                "description": "List student enrollments",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request Withdrawal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/enrollments/{{enrollment_id}}/request-withdrawal",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "enrollments",
+                    "{{{{enrollment_id}}}}",
+                    "request-withdrawal"
+                  ]
+                },
+                "description": "Request withdrawal from enrollment",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Moving\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Applications",
+          "item": [
+            {
+              "name": "Submit Application",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/applications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "applications"
+                  ]
+                },
+                "description": "Submit an application to a university",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"universityId\": 1,\n  \"programId\": 1\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Applications",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/applications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "applications"
+                  ]
+                },
+                "description": "List my applications",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Application",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/applications/{{application_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "applications",
+                    "{{{{application_id}}}}"
+                  ]
+                },
+                "description": "Cancel an application",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "profile"
+                  ]
+                },
+                "description": "Get student profile",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "profile"
+                  ]
+                },
+                "description": "Update contact details",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contactNumber\": \"123456789\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Upload Avatar",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/profile/avatar",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "profile",
+                    "avatar"
+                  ]
+                },
+                "description": "Change Body type to form-data in Postman",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request Profile Change",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/profile-change",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "profile-change"
+                  ]
+                },
+                "description": "Request an official name/DOB change",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"New Name\",\n  \"reason\": \"Legal name change\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Change Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/profile-change",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "profile-change"
+                  ]
+                },
+                "description": "List my profile change requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Settings",
+          "item": [
+            {
+              "name": "Get Settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "settings"
+                  ]
+                },
+                "description": "Get user settings",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Settings",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "settings"
+                  ]
+                },
+                "description": "Update user settings",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"emailNotifications\": true\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Notifications",
+          "item": [
+            {
+              "name": "Get All Notifications",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/notifications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "notifications"
+                  ]
+                },
+                "description": "List all notifications",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Unread Count",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/notifications/unread-count",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "unread-count"
+                  ]
+                },
+                "description": "Get unread count",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Mark As Read",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/notifications/{notification_id}/read",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "{{notification_id}}",
+                    "read"
+                  ]
+                },
+                "description": "Mark one notification as read",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Mark All As Read",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/notifications/read-all",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "read-all"
+                  ]
+                },
+                "description": "Mark all notifications as read",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "University",
+      "item": [
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "dashboard"
+                  ]
+                },
+                "description": "Get dashboard statistics",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Recent Activity",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/dashboard/activity",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "dashboard",
+                    "activity"
+                  ]
+                },
+                "description": "Get recent activity",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Enrollments",
+          "item": [
+            {
+              "name": "List Enrollments",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/enrollments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "enrollments"
+                  ]
+                },
+                "description": "List enrollments",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Enrollment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/enrollments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "enrollments"
+                  ]
+                },
+                "description": "Create an enrollment",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": 1,\n  \"programId\": 1,\n  \"enrollmentNumber\": \"STU123\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Enrollment",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/enrollments/{{enrollment_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "enrollments",
+                    "{{{{enrollment_id}}}}"
+                  ]
+                },
+                "description": "Edit enrollment details",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enrollmentNumber\": \"STU123-NEW\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Extend Graduation",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/enrollments/{{enrollment_id}}/extend-graduation",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "enrollments",
+                    "{{{{enrollment_id}}}}",
+                    "extend-graduation"
+                  ]
+                },
+                "description": "Extend graduation date",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"newGraduationDate\": \"2025-01-01\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Withdraw Student",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/enrollments/{{enrollment_id}}/withdraw",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "enrollments",
+                    "{{{{enrollment_id}}}}",
+                    "withdraw"
+                  ]
+                },
+                "description": "Force withdraw a student",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Dismissed\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Respond to Withdrawal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/enrollments/{{enrollment_id}}/respond-withdrawal",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "enrollments",
+                    "{{{{enrollment_id}}}}",
+                    "respond-withdrawal"
+                  ]
+                },
+                "description": "Respond to student withdrawal request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approve\": true\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Students",
+          "item": [
+            {
+              "name": "Search Enrolled Students",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/students/search",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "students",
+                    "search"
+                  ]
+                },
+                "description": "Search enrolled students. Query: ?q=...",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Search To Enroll",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/students/search-to-enroll",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "students",
+                    "search-to-enroll"
+                  ]
+                },
+                "description": "Search active students available for enrollment",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Certificates",
+          "item": [
+            {
+              "name": "List Certificates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates"
+                  ]
+                },
+                "description": "List issued certificates",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Certificate Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates/{{certificate_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates",
+                    "{{{{certificate_id}}}}"
+                  ]
+                },
+                "description": "Get certificate details",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Issue Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates"
+                  ]
+                },
+                "description": "Issue a single certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enrollmentId\": 1,\n  \"certificateLevelId\": 1,\n  \"cgpa\": \"3.80\",\n  \"issueDate\": \"2024-01-01\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Batch Issue",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates/batch",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates",
+                    "batch"
+                  ]
+                },
+                "description": "Batch issue certificates. Change Body to form-data.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Batch Template",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates/batch-template",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates",
+                    "batch-template"
+                  ]
+                },
+                "description": "Download batch CSV template",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revoke Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates/{{certificate_id}}/revoke",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "revoke"
+                  ]
+                },
+                "description": "Revoke a certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Error in record\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revalidate Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates/{{certificate_id}}/revalidate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "revalidate"
+                  ]
+                },
+                "description": "Revalidate a revoked certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Resolved\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Applications",
+          "item": [
+            {
+              "name": "List Applications",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/applications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "applications"
+                  ]
+                },
+                "description": "List pending student applications",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Application Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/applications/{{application_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "applications",
+                    "{{{{application_id}}}}"
+                  ]
+                },
+                "description": "View specific application",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Review Application",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/applications/{{application_id}}/review",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "applications",
+                    "{{{{application_id}}}}",
+                    "review"
+                  ]
+                },
+                "description": "Accept or reject application",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"ACCEPTED\",\n  \"message\": \"Welcome!\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Programs",
+          "item": [
+            {
+              "name": "Get Certificate Levels",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/certificate-levels",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificate-levels"
+                  ]
+                },
+                "description": "List certificate levels",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Certificate Level",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificate-levels",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificate-levels"
+                  ]
+                },
+                "description": "Create a certificate level",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Bachelor of Science\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Departments",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/departments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "departments"
+                  ]
+                },
+                "description": "List departments",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Department",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/departments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "departments"
+                  ]
+                },
+                "description": "Create a department",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Computer Science\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Majors",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/majors",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "majors"
+                  ]
+                },
+                "description": "List majors",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Major",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/majors",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "majors"
+                  ]
+                },
+                "description": "Create a major",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Software Engineering\",\n  \"departmentId\": 1\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "profile"
+                  ]
+                },
+                "description": "Get university profile",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "profile"
+                  ]
+                },
+                "description": "Update university profile",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contactEmail\": \"admin@uni.edu\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Settings",
+          "item": [
+            {
+              "name": "Get Settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "settings"
+                  ]
+                },
+                "description": "Get university settings",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Verifier",
+      "item": [
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "dashboard"
+                  ]
+                },
+                "description": "Get verifier dashboard stats",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Search Students",
+          "item": [
+            {
+              "name": "Search Student",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/search",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "search"
+                  ]
+                },
+                "description": "Search by email, NID, or ID. Query: ?q=...",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Access Requests",
+          "item": [
+            {
+              "name": "Send Request",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/verifier/access-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "access-requests"
+                  ]
+                },
+                "description": "Send access request to a student",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": 1,\n  \"purpose\": \"Background check\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/access-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "access-requests"
+                  ]
+                },
+                "description": "List my access requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Request",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/access-requests/{{access_request_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "access-requests",
+                    "{{{{access_request_id}}}}"
+                  ]
+                },
+                "description": "Cancel a pending request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Accessible Certificates",
+          "item": [
+            {
+              "name": "List Accessible Students",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/accessible-students",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "accessible-students"
+                  ]
+                },
+                "description": "List students who granted access (pseudo-endpoint based on grants)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "View Student Certificates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/accessible-certificates/{{student_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "accessible-certificates",
+                    "{{{{student_id}}}}"
+                  ]
+                },
+                "description": "View certificates of a student who granted access",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Verification",
+          "item": [
+            {
+              "name": "Verify Manual",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verify"
+                  ]
+                },
+                "description": "Manual verification (same as public but logged for verifier)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verification History",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/verifications/history",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "verifications",
+                    "history"
+                  ]
+                },
+                "description": "List verification history",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Recent Verifications",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/verifications/recent",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "verifications",
+                    "recent"
+                  ]
+                },
+                "description": "Get recent verifications",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Export Verifications",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/verifications/export",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "verifications",
+                    "export"
+                  ]
+                },
+                "description": "Export verification history to CSV",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile"
+                  ]
+                },
+                "description": "Get verifier profile (assuming unified or specific)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Settings",
+          "item": [
+            {
+              "name": "Get Settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "settings"
+                  ]
+                },
+                "description": "Get settings",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "dashboard"
+                  ]
+                },
+                "description": "Admin dashboard statistics",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "List Users",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users"
+                  ]
+                },
+                "description": "List all users. Query: ?status=PENDING",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "User Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}"
+                  ]
+                },
+                "description": "Get user details",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Approve User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "approve"
+                  ]
+                },
+                "description": "Approve a pending user account",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Suspend User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/suspend",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "suspend"
+                  ]
+                },
+                "description": "Suspend a user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Violation of terms\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Unsuspend User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/unsuspend",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "unsuspend"
+                  ]
+                },
+                "description": "Unsuspend a user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reactivate User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/reactivate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "reactivate"
+                  ]
+                },
+                "description": "Reactivate a deleted/deactivated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "User Certs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "certificates"
+                  ]
+                },
+                "description": "View user's certificates",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "User Enrollments",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/enrollments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "enrollments"
+                  ]
+                },
+                "description": "View user's enrollments",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "User Activity",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/activity",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "activity"
+                  ]
+                },
+                "description": "View user's activity logs",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Certificates",
+          "item": [
+            {
+              "name": "List Certificates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates"
+                  ]
+                },
+                "description": "List all certificates across system",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Certificate Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates/{{certificate_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates",
+                    "{{{{certificate_id}}}}"
+                  ]
+                },
+                "description": "View specific certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revoke Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates/{{certificate_id}}/revoke",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "revoke"
+                  ]
+                },
+                "description": "Admin revoke certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Fraudulent\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revalidate Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates/{{certificate_id}}/revalidate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "revalidate"
+                  ]
+                },
+                "description": "Admin revalidate certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Issue resolved\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Access Grants",
+          "item": [
+            {
+              "name": "List Access Grants",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/access-grants",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "access-grants"
+                  ]
+                },
+                "description": "List all active access grants",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revoke Grant",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/access-grants/{grant_id}/revoke",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "access-grants",
+                    "{{grant_id}}",
+                    "revoke"
+                  ]
+                },
+                "description": "Admin forcibly revoke a grant",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Profile Change Requests",
+          "item": [
+            {
+              "name": "List Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/profile-changes",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile-changes"
+                  ]
+                },
+                "description": "List profile change requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Approve Request",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/profile-changes/{request_id}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile-changes",
+                    "{{request_id}}",
+                    "approve"
+                  ]
+                },
+                "description": "Approve profile change",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reject Request",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/profile-changes/{request_id}/reject",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile-changes",
+                    "{{request_id}}",
+                    "reject"
+                  ]
+                },
+                "description": "Reject profile change",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Invalid documentation\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Deletion Requests",
+          "item": [
+            {
+              "name": "List Deletion Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/deletion-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "deletion-requests"
+                  ]
+                },
+                "description": "List account deletion requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Complete Deletion",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/deletion-requests/{request_id}/complete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "deletion-requests",
+                    "{{request_id}}",
+                    "complete"
+                  ]
+                },
+                "description": "Complete an account deletion",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Deletion",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/deletion-requests/{request_id}/cancel",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "deletion-requests",
+                    "{{request_id}}",
+                    "cancel"
+                  ]
+                },
+                "description": "Cancel a deletion request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Notifications",
+          "item": [
+            {
+              "name": "Send Notification",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/notifications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "notifications"
+                  ]
+                },
+                "description": "Send system-wide or targeted notification",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"System Update\",\n  \"message\": \"Downtime expected\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "\ud83e\uddea Test Flows \u2014 Run These In Order",
+      "item": [
+        {
+          "name": "Flow 1: Full Auth Flow",
+          "description": "Complete registration \u2192 OTP \u2192 admin approval \u2192 login",
+          "item": [
+            {
+              "name": "Step 1: Register Student",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Register new student (unique email each time)",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"STUDENT\",\n  \"email\": \"flowstudent@test.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Flow\",\n  \"lastName\": \"Student\",\n  \"nationalId\": \"NID-FLOW-001\",\n  \"dateOfBirth\": \"2000-01-01\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Verify Email",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/verify-email",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "verify-email"
+                  ]
+                },
+                "description": "Verify email with OTP (update the code manually)",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"flowstudent@test.com\",\n  \"code\": \"123456\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: Admin Approves",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "approve"
+                  ]
+                },
+                "description": "Use the admin_token from the Start Here folder for step 3. Replace {user_id} with actual ID.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 4: Student Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Student logs in",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"flowstudent@test.com\",\n  \"password\": \"password123\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 2: Certificate Verification",
+          "description": "Test all verification methods",
+          "item": [
+            {
+              "name": "Step 1: Verify Valid Cert",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verify?serial=CERT123&dob=2000-01-01",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verify?serial=CERT123&dob=2000-01-01"
+                  ]
+                },
+                "description": "Verify valid cert (use seeded serial + DOB)",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Verify Wrong DOB",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verify?serial=CERT123&dob=1999-01-01",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verify?serial=CERT123&dob=1999-01-01"
+                  ]
+                },
+                "description": "Verify with wrong DOB \u2192 expect not_found",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: Verify Tampered Serial",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verify?serial=CERT123-TAMPERED&dob=2000-01-01",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verify?serial=CERT123-TAMPERED&dob=2000-01-01"
+                  ]
+                },
+                "description": "Verify tampered serial \u2192 expect invalid_checksum",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 4: Verify via Share Link",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verify-link?token=valid_share_token",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verify-link?token=valid_share_token"
+                  ]
+                },
+                "description": "Verify via share link",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 3: Issue Certificate",
+          "description": "University issues cert \u2192 student downloads PDF",
+          "item": [
+            {
+              "name": "Step 1: Search Enrolled Students",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/students/search?q=John",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "students",
+                    "search?q=John"
+                  ]
+                },
+                "description": "Search enrolled students (uses university_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Issue Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificates"
+                  ]
+                },
+                "description": "Issue certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enrollmentId\": 1,\n  \"certificateLevelId\": 1,\n  \"cgpa\": \"4.00\",\n  \"issueDate\": \"2024-01-01\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: Check Student Certificates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates"
+                  ]
+                },
+                "description": "Check student certificates (uses student_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 4: Download PDF",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{certificate_id}}/pdf",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "pdf"
+                  ]
+                },
+                "description": "Download PDF",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 5: Get Share Link",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{certificate_id}}/share-link",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "share-link"
+                  ]
+                },
+                "description": "Get share link",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 4: Verifier Access Request",
+          "description": "Full access request and approval flow",
+          "item": [
+            {
+              "name": "Step 1: Search Student by Email",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/search?q=student@test.com",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "search?q=student@test.com"
+                  ]
+                },
+                "description": "Search student by email (uses verifier_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Send Access Request",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/verifier/access-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "access-requests"
+                  ]
+                },
+                "description": "Send access request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": 1,\n  \"purpose\": \"Employment Verification\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: Student Views Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/access-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-requests"
+                  ]
+                },
+                "description": "Student views requests (uses student_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 4: Student Approves",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/access-requests/{{access_request_id}}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-requests",
+                    "{{{{access_request_id}}}}",
+                    "approve"
+                  ]
+                },
+                "description": "Student approves",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 5: Verifier Views Accessible Certs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/accessible-certificates/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "accessible-certificates",
+                    "1"
+                  ]
+                },
+                "description": "Verifier views accessible certs (uses verifier_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 6: Student Revokes Access",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/access-grants/{grant_id}/revoke",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "access-grants",
+                    "{{grant_id}}",
+                    "revoke"
+                  ]
+                },
+                "description": "Student revokes access",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 7: Verifier Tries Again",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/verifier/accessible-certificates/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "verifier",
+                    "accessible-certificates",
+                    "1"
+                  ]
+                },
+                "description": "Verifier tries again \u2192 expect 403",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{verifier_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 5: Student Application",
+          "description": "Student applies \u2192 university reviews",
+          "item": [
+            {
+              "name": "Step 1: Get University List",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/public/universities",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "universities"
+                  ]
+                },
+                "description": "Get university list (public)",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Student Submits Application",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/applications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "applications"
+                  ]
+                },
+                "description": "Student submits application (uses student_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"universityId\": 1,\n  \"programId\": 1\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: University Views Applications",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/applications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "applications"
+                  ]
+                },
+                "description": "University views applications (uses university_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 4: University Accepts",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/applications/{{application_id}}/review",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "applications",
+                    "{{{{application_id}}}}",
+                    "review"
+                  ]
+                },
+                "description": "University accepts",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"ACCEPTED\",\n  \"message\": \"Accepted\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 5: Student Checks Application Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/applications",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "applications"
+                  ]
+                },
+                "description": "Student checks application status",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 6: Admin Management",
+          "description": "Admin manages users and certificates",
+          "item": [
+            {
+              "name": "Step 1: Get All Pending Users",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users?status=PENDING",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users?status=PENDING"
+                  ]
+                },
+                "description": "Get all pending users (uses admin_token)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Approve a User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{user_id}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{user_id}}",
+                    "approve"
+                  ]
+                },
+                "description": "Approve a user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: Get All Certificates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates"
+                  ]
+                },
+                "description": "Get all certificates",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 4: Revoke a Certificate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates/{{certificate_id}}/revoke",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "revoke"
+                  ]
+                },
+                "description": "Revoke a certificate",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Admin action\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Step 5: Revalidate It",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/certificates/{{certificate_id}}/revalidate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "certificates",
+                    "{{{{certificate_id}}}}",
+                    "revalidate"
+                  ]
+                },
+                "description": "Revalidate it",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Mistake corrected\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

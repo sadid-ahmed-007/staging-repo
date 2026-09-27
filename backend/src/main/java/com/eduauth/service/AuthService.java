@@ -66,7 +66,7 @@ public class AuthService {
         pending.setExpiresAt(LocalDateTime.now().plusMinutes(10));
         pendingRegistrationRepository.save(pending);
 
-        emailService.sendOtpEmail(request.getEmail(), otp, name);
+        emailService.sendOtpEmail(null, request.getEmail(), otp, name);
     }
 
     @Transactional
@@ -153,11 +153,13 @@ public class AuthService {
         // Create User Settings
         UserSettings settings = new UserSettings();
         settings.setUserId(user.getId());
-        settings.setPreferences("{\"notifications\":{\"email\":true,\"inApp\":true},\"privacy\":{\"profileVisibility\":\"public\",\"certificateDefault\":\"public\"},\"display\":{\"theme\":\"light\",\"dateFormat\":\"DD/MM/YYYY\"}}");
+        settings.setPreferences("{\"notifications\":{\"email\":true,\"inApp\":true},\"emailPreferences\":{\"accountEvents\":true,\"enrollmentEvents\":true,\"certificateEvents\":true,\"accessEvents\":true,\"applicationEvents\":true,\"verificationAlerts\":true},\"privacy\":{\"profileVisibility\":\"public\",\"certificateDefault\":\"public\"},\"display\":{\"theme\":\"light\",\"dateFormat\":\"DD/MM/YYYY\"}}");
         userSettingsRepository.save(settings);
 
         // Activity log
         logActivity(user.getId(), "USER_REGISTERED", "User registered and email verified");
+
+        emailService.sendEmailVerified(user.getId(), user.getEmail(), pending.getUserName());
 
         pending.setVerifiedAt(LocalDateTime.now());
         pendingRegistrationRepository.save(pending);
@@ -174,7 +176,7 @@ public class AuthService {
         pending.setAttempts(0);
         pendingRegistrationRepository.save(pending);
 
-        emailService.sendOtpEmail(request.getEmail(), otp, pending.getUserName());
+        emailService.sendOtpEmail(null, request.getEmail(), otp, pending.getUserName());
     }
 
     @Transactional

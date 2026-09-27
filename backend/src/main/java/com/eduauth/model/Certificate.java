@@ -95,6 +95,18 @@ public class Certificate {
     @Column(name = "is_publicly_shareable")
     private Boolean isPubliclyShareable = true;
 
+    /** When false: anonymous public verification is rejected (logged-in verifiers with active grants still pass). */
+    @Column(name = "allow_anonymous_verification")
+    private Boolean allowAnonymousVerification = true;
+
+    /** When true: student receives email + in-app notification on every successful verification. */
+    @Column(name = "notify_on_verification")
+    private Boolean notifyOnVerification = true;
+
+    /** When true: skip notification if verifier is a logged-in verifier (only notify for anonymous). */
+    @Column(name = "notify_on_anonymous_only")
+    private Boolean notifyOnAnonymousOnly = false;
+
     // Revocation fields
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;

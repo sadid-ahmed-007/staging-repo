@@ -6,8 +6,10 @@ import com.eduauth.model.*;
 import com.eduauth.repository.*;
 import com.eduauth.service.EnrollmentService;
 import com.eduauth.service.NotificationService;
+import com.eduauth.service.EmailService;
 import com.eduauth.service.ProgramService;
 import com.eduauth.service.SerialGeneratorService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -42,18 +44,21 @@ import java.util.*;
 @PreAuthorize("hasRole('UNIVERSITY')")
 public class UniversityCertificateIssuanceController {
 
-    private final InstitutionRepository   institutionRepository;
-    private final CertificateRepository   certificateRepository;
-    private final EnrollmentRepository    enrollmentRepository;
-    private final StudentRepository       studentRepository;
-    private final ActivityLogRepository   activityLogRepository;
-    private final UserRepository          userRepository;
-    private final EnrollmentService       enrollmentService;
-    private final SerialGeneratorService  serialGeneratorService;
-    private final NotificationService     notificationService;
-    private final ProgramService          programService;
-    private final DepartmentRepository    departmentRepository;
+    private final InstitutionRepository     institutionRepository;
+    private final CertificateRepository     certificateRepository;
+    private final EnrollmentRepository      enrollmentRepository;
+    private final StudentRepository         studentRepository;
+    private final ActivityLogRepository     activityLogRepository;
+    private final UserRepository            userRepository;
+    private final UserSettingsRepository    userSettingsRepository;
+    private final EnrollmentService         enrollmentService;
+    private final SerialGeneratorService    serialGeneratorService;
+    private final NotificationService       notificationService;
+    private final ProgramService            programService;
+    private final DepartmentRepository      departmentRepository;
     private final CertificateLevelRepository certificateLevelRepository;
+    private final ObjectMapper              objectMapper;
+    private final EmailService              emailService;
 
     // ── POST /api/university/certificates ────────────────────────────────────
 
@@ -200,7 +205,9 @@ public class UniversityCertificateIssuanceController {
         cert.setAuthorityName(authName);
         cert.setAuthorityTitle(authTitle);
         cert.setIssuedName(issuedName);
-        cert.setIsPubliclyShareable(true);
+
+        // Apply student's default privacy settings from user_settings.preferences.certificateDefaults
+        applyStudentPrivacyDefaults(cert, student);
 
         cert = certificateRepository.save(cert);
 
@@ -217,6 +224,10 @@ public class UniversityCertificateIssuanceController {
 
         // 10. Notify student: CERTIFICATE_ISSUED
         if (student.getUser() != null) {
+            String studentName = buildFullName(student);
+            emailService.sendCertificateIssued(student.getUser().getId(), student.getUser().getEmail(), 
+                    studentName, institution.getName(), cert.getCertificateName(), cert.getSerial());
+                    
             notificationService.createNotification(
                     student.getUser().getId(),
                     "CERTIFICATE_ISSUED",
@@ -240,6 +251,61 @@ public class UniversityCertificateIssuanceController {
                         "enrollmentStatus", "graduated"
                 )
         ));
+    }
+
+    // ── Helper: apply default privacy settings from UserSettings ─────────────
+
+    /**
+     * Reads the student's user_settings.preferences JSON and applies
+     * certificateDefaults to the newly created certificate.
+     *
+     * Expected JSON structure (inside preferences):
+     * {
+     *   "certificateDefaults": {
+     *     "isPubliclyShareable": true,
+     *     "allowAnonymousVerification": true,
+     *     "notifyOnVerification": true,
+     *     "notifyOnAnonymousOnly": false
+     *   }
+     * }
+     *
+     * Falls back to platform defaults (true/true/true/false) if no settings found.
+     */
+    @SuppressWarnings("unchecked")
+    private void applyStudentPrivacyDefaults(Certificate cert, Student student) {
+        // Platform defaults
+        boolean isPubliclyShareable         = true;
+        boolean allowAnonymousVerification  = true;
+        boolean notifyOnVerification        = true;
+        boolean notifyOnAnonymousOnly       = false;
+
+        try {
+            if (student.getUser() != null) {
+                UserSettings us = userSettingsRepository.findByUserId(student.getUser().getId()).orElse(null);
+                if (us != null && us.getPreferences() != null && !us.getPreferences().isBlank()) {
+                    java.util.Map<String, Object> prefs =
+                            objectMapper.readValue(us.getPreferences(), java.util.Map.class);
+                    Object defaults = prefs.get("certificateDefaults");
+                    if (defaults instanceof java.util.Map<?, ?> defaultsMap) {
+                        if (defaultsMap.containsKey("isPubliclyShareable"))
+                            isPubliclyShareable = Boolean.parseBoolean(defaultsMap.get("isPubliclyShareable").toString());
+                        if (defaultsMap.containsKey("allowAnonymousVerification"))
+                            allowAnonymousVerification = Boolean.parseBoolean(defaultsMap.get("allowAnonymousVerification").toString());
+                        if (defaultsMap.containsKey("notifyOnVerification"))
+                            notifyOnVerification = Boolean.parseBoolean(defaultsMap.get("notifyOnVerification").toString());
+                        if (defaultsMap.containsKey("notifyOnAnonymousOnly"))
+                            notifyOnAnonymousOnly = Boolean.parseBoolean(defaultsMap.get("notifyOnAnonymousOnly").toString());
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // Non-fatal — fall back to platform defaults
+        }
+
+        cert.setIsPubliclyShareable(isPubliclyShareable);
+        cert.setAllowAnonymousVerification(allowAnonymousVerification);
+        cert.setNotifyOnVerification(notifyOnVerification);
+        cert.setNotifyOnAnonymousOnly(notifyOnAnonymousOnly);
     }
 
     // ── POST /api/university/certificates/batch ───────────────────────────────
@@ -551,7 +617,7 @@ public class UniversityCertificateIssuanceController {
         cert.setAuthorityName(authorityName);
         cert.setAuthorityTitle(authorityTitle);
         cert.setIssuedName(issuedName);
-        cert.setIsPubliclyShareable(true);
+        applyStudentPrivacyDefaults(cert, student);
 
         certificateRepository.save(cert);
 
@@ -566,6 +632,9 @@ public class UniversityCertificateIssuanceController {
 
         // Notify student: CERTIFICATE_ISSUED
         if (student.getUser() != null) {
+            emailService.sendCertificateIssued(student.getUser().getId(), student.getUser().getEmail(), 
+                    issuedName, institution.getName(), cert.getCertificateName(), cert.getSerial());
+                    
             notificationService.createNotification(
                     student.getUser().getId(),
                     "CERTIFICATE_ISSUED",

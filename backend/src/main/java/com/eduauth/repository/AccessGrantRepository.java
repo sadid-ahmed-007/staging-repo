@@ -147,4 +147,10 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, Long>,
             @Param("verifierId") Long verifierId,
             @Param("studentId")  Long studentId,
             @Param("now")        LocalDateTime now);
+
+    @Query("SELECT a FROM AccessGrant a WHERE a.revokedAt IS NULL AND a.expiresAt > :now AND a.expiresAt <= :threeDays AND (a.notified3DaysBefore IS NULL OR a.notified3DaysBefore = :notified)")
+    List<AccessGrant> findGrantsExpiringBetweenAndNotified(@Param("now") LocalDateTime now, @Param("threeDays") LocalDateTime threeDays, @Param("notified") Boolean notified);
+    
+    @Query("SELECT a FROM AccessGrant a WHERE a.revokedAt IS NULL AND a.expiresAt > :start AND a.expiresAt <= :end AND (a.notified3DaysBefore IS NULL OR a.notified3DaysBefore = :notified)")
+    List<AccessGrant> findGrantsExpiredBetweenAndNotified(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("notified") Boolean notified);
 }

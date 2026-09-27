@@ -46,6 +46,7 @@ public class AccessService {
     private final ActivityLogRepository   activityLogRepository;
     private final NotificationService     notificationService;
     private final CertificateRepository   certificateRepository;
+    private final EmailService            emailService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // VERIFIER SIDE
@@ -131,10 +132,13 @@ public class AccessService {
         String notificationMessage = targetCert != null
                 ? companyName + " has requested access to your certificate (" + targetCert.getCertificateName() + " - " + targetCert.getSerial() + ")"
                 : companyName + " has requested access to all your certificates";
+                
+        String studentName = (student.getFirstName() + " " + student.getLastName()).trim();
+        emailService.sendAccessRequest(studentUserId, student.getUser().getEmail(), studentName, companyName, targetCert != null ? "Certificate: " + targetCert.getCertificateName() : "All Certificates", String.valueOf(dto.getRequestedDurationDays()));
 
         createNotification(
                 studentUserId,
-                "ACCESS_REQUEST",
+                "VERIFICATION_REQUESTED", // Fixed notification type
                 "New Access Request",
                 notificationMessage,
                 Map.of("accessRequestId", req.getId()),
@@ -276,12 +280,16 @@ public class AccessService {
                 String expiryDate = grant.getExpiresAt()
                         .format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
                 String notifMsg;
+                String verifEmail = verifierRepository.findById(grant.getVerifierId()).get().getUser().getEmail();
+                String vName = verifierRepository.findById(grant.getVerifierId()).get().getCompanyName();
                 if (req.getCertificateId() != null) {
                     Certificate cert = certificateRepository.findById(req.getCertificateId()).orElse(null);
                     String certDesc = cert != null ? (" (" + cert.getCertificateName() + ")") : "";
                     notifMsg = "Your access request for certificate" + certDesc + " was approved. Access expires on " + expiryDate;
+                    emailService.sendAccessApproved(verifierUserId, verifEmail, vName, studentName, expiryDate);
                 } else {
                     notifMsg = "Your access request for all certificates was approved. Access expires on " + expiryDate;
+                    emailService.sendAccessApproved(verifierUserId, verifEmail, vName, studentName, expiryDate);
                 }
                 createNotification(
                         verifierUserId,
@@ -309,6 +317,11 @@ public class AccessService {
 
             // Notify verifier
             if (verifierUserId != null) {
+                String verifEmail = verifierRepository.findById(req.getVerifierId()).get().getUser().getEmail();
+                String vName = verifierRepository.findById(req.getVerifierId()).get().getCompanyName();
+                
+                emailService.sendAccessRejected(verifierUserId, verifEmail, vName, studentName);
+                
                 createNotification(
                         verifierUserId,
                         "ACCESS_REQUEST_REJECTED",
@@ -378,6 +391,9 @@ public class AccessService {
         // Notify verifier
         Verifier verifier = verifierRepository.findById(grant.getVerifierId()).orElse(null);
         if (verifier != null && verifier.getUser() != null) {
+            String vName = verifier.getCompanyName() != null ? verifier.getCompanyName() : "Verifier";
+            emailService.sendAccessRevoked(verifier.getUser().getId(), verifier.getUser().getEmail(), vName, studentName);
+            
             createNotification(
                     verifier.getUser().getId(),
                     "ACCESS_REVOKED",
@@ -422,6 +438,7 @@ public class AccessService {
 
         // Notify verifier
         if (verifier != null && verifier.getUser() != null) {
+            emailService.sendAccessRevokedAdmin(verifier.getUser().getId(), verifier.getUser().getEmail(), verifierName, verifierName, studentName);
             createNotification(
                     verifier.getUser().getId(),
                     "ADMIN_ACCESS_REVOKED",

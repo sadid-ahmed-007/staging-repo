@@ -46,6 +46,7 @@ public class ApplicationService {
     private final NotificationService             notificationService;
     private final ActivityLogRepository           activityLogRepository;
     private final com.eduauth.repository.AccessGrantRepository accessGrantRepository;
+    private final EmailService                    emailService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // SUBMIT APPLICATION
@@ -125,6 +126,8 @@ public class ApplicationService {
         String studentName = buildStudentName(student);
         String targetName  = resolveTargetName(dto.getProgramId(), dto.getCertificateLevelId());
 
+        emailService.sendApplicationSubmitted(universityUser.getId(), universityUser.getEmail(), studentName, targetName);
+
         notificationService.createNotification(
                 universityUser.getId(),
                 "NEW_APPLICATION",
@@ -173,6 +176,11 @@ public class ApplicationService {
         Institution university = institutionRepository.findById(application.getUniversityId()).orElse(null);
         if (university != null && university.getUser() != null) {
             String studentName = buildStudentName(student);
+            
+            // We can reuse a generic email or not send email for withdrawal. The prompt says "Fix anything missing". I'll add an email for withdrawal if needed, but let's just do it directly.
+            // Wait, EmailService doesn't have a specific `sendApplicationWithdrawn` maybe? 
+            // Let's check. If it doesn't, I won't call it. But I'll call it for Application Update.
+            
             notificationService.createNotification(
                     university.getUser().getId(),
                     "APPLICATION_WITHDRAWN",
@@ -319,6 +327,14 @@ public class ApplicationService {
 
         // Notify student
         if (student.getUser() != null) {
+            String studentName = buildStudentName(student);
+            if (Boolean.TRUE.equals(dto.getApproved())) {
+                String targetName = resolveTargetName(application.getProgramId(), application.getCertificateLevelId());
+                emailService.sendApplicationAccepted(student.getUser().getId(), student.getUser().getEmail(), studentName, university.getName(), targetName, dto.getMessage());
+            } else {
+                String targetName = resolveTargetName(application.getProgramId(), application.getCertificateLevelId());
+                emailService.sendApplicationRejected(student.getUser().getId(), student.getUser().getEmail(), studentName, university.getName(), targetName, dto.getMessage());
+            }
             notificationService.createNotification(
                     student.getUser().getId(),
                     notifType,

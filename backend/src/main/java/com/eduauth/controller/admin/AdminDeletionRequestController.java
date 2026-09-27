@@ -8,6 +8,7 @@ import com.eduauth.repository.AccountDeletionRequestRepository;
 import com.eduauth.repository.ActivityLogRepository;
 import com.eduauth.repository.UserRepository;
 import com.eduauth.service.NotificationService;
+import com.eduauth.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,6 +31,7 @@ public class AdminDeletionRequestController {
     private final UserRepository userRepository;
     private final ActivityLogRepository activityLogRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -86,6 +88,8 @@ public class AdminDeletionRequestController {
         log.setDescription("Account deletion completed for user #" + targetUser.getId() + " (" + targetUser.getEmail() + ")");
         activityLogRepository.save(log);
 
+        emailService.sendDeletionCompleted(targetUser.getId(), targetUser.getEmail(), "User");
+
         return ResponseEntity.ok(Map.of("success", true, "message", "Account deletion completed"));
     }
 
@@ -113,6 +117,16 @@ public class AdminDeletionRequestController {
         req.setCompletedAt(LocalDateTime.now());
         req.setCompletedBy(admin);
         deletionRequestRepository.save(req);
+        
+        emailService.sendDeletionCancelled(targetUser.getId(), targetUser.getEmail(), "User");
+        notificationService.createNotification(
+                targetUser.getId(),
+                "DELETION_CANCELLED",
+                "Deletion Cancelled",
+                "Your account is restored and active.",
+                "/" + targetUser.getRole() + "/dashboard",
+                Map.of()
+        );
 
         ActivityLog log = new ActivityLog();
         log.setUserId(admin.getId());

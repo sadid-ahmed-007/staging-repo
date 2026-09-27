@@ -43,6 +43,8 @@ public class ProfileController {
     @Autowired private ProfileChangeRequestRepository profileChangeRequestRepository;
     @Autowired private FileStorageService fileStorageService;
     @Autowired private AccountDeletionRequestRepository accountDeletionRequestRepository;
+    @Autowired private com.eduauth.service.EmailService emailService;
+    @Autowired private com.eduauth.service.NotificationService notificationService;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -400,6 +402,16 @@ public class ProfileController {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        
+        emailService.sendSecurityAlert(user.getId(), user.getEmail(), "User", java.time.LocalDateTime.now().toString());
+        notificationService.createNotification(
+                user.getId(),
+                "SECURITY_ALERT",
+                "Password changed successfully",
+                "Your password was changed successfully",
+                "/profile",
+                java.util.Map.of()
+        );
 
         // Blacklist token
         String header = httpRequest.getHeader("Authorization");
@@ -476,6 +488,19 @@ public class ProfileController {
         req.setReason(reason);
         req.setStatus("pending");
         accountDeletionRequestRepository.save(req);
+        
+        emailService.sendDeletionRequestedAdmin(null, "admin@eduauth.local", user.getEmail());
+        emailService.sendDeletionRequestedUser(user.getId(), user.getEmail(), "User");
+        
+        // Notify admin
+        notificationService.createNotification(
+                1L, // Assuming 1L is primary admin
+                "DELETION_REQUEST",
+                "New account deletion request",
+                "Account deletion requested by " + user.getEmail(),
+                "/admin/users",
+                java.util.Map.of()
+        );
 
         // Immediately deactivate account
         user.setIsDeactivated(true);

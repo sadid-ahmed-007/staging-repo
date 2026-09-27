@@ -189,7 +189,7 @@ INSERT INTO withdrawal_requests (id, enrollment_id, student_id, reason, status, 
 (3, 8, 3, 'Transferring to another university.', 'pending', NULL, NULL, NULL, NOW(), NOW());
 
 -- PROFILE CHANGE REQUESTS
-INSERT INTO profile_change_requests (id, user_id, field_name, current_value, requested_value, reason, status, reviewed_by, reviewed_at, review_notes, supporting_documents, created_at, updated_at) VALUES
+INSERT INTO profile_change_requests (id, user_id, field_name, current_value, requested_value, reason, status, reviewed_by, reviewed_at, review_notes, supporting_document_path, created_at, updated_at) VALUES
 (1, 3, 'phone',   '+8801700001001',   '+8801811112222',    'Switched to a new mobile carrier.', 'pending',  NULL, NULL, NULL, NULL, NOW(), NOW()),
 (2, 4, 'address', 'Mohammadpur, Dhaka', 'Mirpur-10, Dhaka', 'Moved to a new apartment.',      'approved', 1, DATE_SUB(NOW(), INTERVAL 3 DAY), NULL, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY)),
 (3, 5, 'phone',   '+8801700001003',   '+8801922334455',    'Lost my previous SIM card.',       'rejected', 1, DATE_SUB(NOW(), INTERVAL 1 DAY), 'The provided phone number appears to be invalid. Please verify and resubmit.', NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
@@ -269,3 +269,4 @@ INSERT INTO notifications (id, type, notifiable_type, notifiable_id, data, read_
 -- PENDING REGISTRATIONS (sample)
 INSERT INTO pending_registrations (id, email, user_name, registration_role, code_hash, registration_data, expires_at, verified_at, attempts, created_at, updated_at) VALUES
 (1, 'new.applicant@gmail.com', 'New Applicant', 'student', SHA2('verify-code-123', 256), '{"phone":"+8801700002001","first_name":"New","last_name":"Applicant"}', DATE_ADD(NOW(), INTERVAL 1 DAY), NULL, 0, NOW(), NOW());
+

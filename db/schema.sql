@@ -278,6 +278,9 @@ CREATE TABLE certificates (
   issued_name VARCHAR(255) NULL,
   revocation_history JSON NULL,
   is_publicly_shareable TINYINT(1) NOT NULL DEFAULT 1,
+  allow_anonymous_verification BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'When false: anonymous public verification requests are rejected (logged-in verifiers with grants still allowed)',
+  notify_on_verification BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'When true: student receives email + in-app notification on every successful verification',
+  notify_on_anonymous_only BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'When true: only send notification if the verifier is anonymous (not a logged-in verifier)',
   revoked_at TIMESTAMP NULL,
   revoked_by BIGINT UNSIGNED NULL,
   revoked_by_role ENUM('university','admin') NULL DEFAULT NULL,
@@ -337,6 +340,7 @@ CREATE TABLE verifier_access (
   expires_at TIMESTAMP NULL DEFAULT NULL,
   revoked_at TIMESTAMP NULL,
   revoked_by BIGINT UNSIGNED NULL,
+  notified_3_days_before BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   deleted_at TIMESTAMP NULL,
@@ -437,26 +441,6 @@ CREATE TABLE withdrawal_requests (
     NULL
 );
 
--- Table: profile_change_requests - Student requests for sensitive profile updates
-CREATE TABLE profile_change_requests (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL,
-  field_name VARCHAR(255) NOT NULL,
-  current_value TEXT NULL,
-  requested_value TEXT NOT NULL,
-  reason TEXT NULL,
-  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
-  reviewed_by BIGINT UNSIGNED NULL,
-  reviewed_at TIMESTAMP NULL,
-  review_notes TEXT NULL,
-  supporting_documents JSON NULL,
-  created_at TIMESTAMP NULL,
-  updated_at TIMESTAMP NULL,
-  CONSTRAINT fk_profile_change_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_profile_change_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE
-  SET
-    NULL
-);
 
 -- Table: notifications - User notifications (Laravel format)
 CREATE TABLE notifications (

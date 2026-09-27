@@ -39,7 +39,7 @@ public class UniversitySettingsController {
         return ResponseEntity.ok(Map.of("success", true, "certificate_levels", levels));
     }
 
-    @PostMapping("/certificate-levels")
+    @PostMapping("/legacy-certificate-levels")
     @Transactional
     public ResponseEntity<?> createCertificateLevel(@AuthenticationPrincipal User user, @RequestBody Map<String, String> body) {
         Institution inst = resolveInstitution(user);
@@ -55,7 +55,7 @@ public class UniversitySettingsController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Certificate level created"));
     }
 
-    @PutMapping("/certificate-levels/{id}")
+    @PutMapping("/legacy-certificate-levels/{id}")
     @Transactional
     public ResponseEntity<?> updateCertificateLevel(@AuthenticationPrincipal User user, @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
         Institution inst = resolveInstitution(user);
@@ -72,7 +72,7 @@ public class UniversitySettingsController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Certificate level updated"));
     }
 
-    @DeleteMapping("/certificate-levels/{id}")
+    @DeleteMapping("/legacy-certificate-levels/{id}")
     @Transactional
     public ResponseEntity<?> deactivateCertificateLevel(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
@@ -122,7 +122,7 @@ public class UniversitySettingsController {
         return ResponseEntity.ok(Map.of("success", true, "departments", depts));
     }
 
-    @PostMapping("/departments")
+    @PostMapping("/legacy-departments")
     @Transactional
     public ResponseEntity<?> createDepartment(@AuthenticationPrincipal User user, @RequestBody Map<String, Object> body) {
         Institution inst = resolveInstitution(user);
@@ -141,7 +141,7 @@ public class UniversitySettingsController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Department created"));
     }
 
-    @PutMapping("/departments/{id}")
+    @PutMapping("/legacy-departments/{id}")
     @Transactional
     public ResponseEntity<?> updateDepartment(@AuthenticationPrincipal User user, @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
         Institution inst = resolveInstitution(user);
