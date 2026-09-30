@@ -62,7 +62,7 @@ export default function StatCard({
  )}
  <div className="flex items-start justify-between gap-3">
  <div className="min-w-0 flex-1">
- <p className="text-sm font-medium text-[var(--text-secondary)] line-clamp-1" title={actualTitle}>
+ <p className="text-sm font-medium text-[var(--text-secondary)] leading-snug" title={actualTitle}>
  {actualTitle}
  </p>
  <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-primary)]">

@@ -20,6 +20,7 @@ import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import ConfirmModal from '../../components/shared/ConfirmModal';
+import Modal from '../../components/shared/Modal';
 import api from '../../services/api';
 import { formatDate, cn } from '../../utils/helpers';
 

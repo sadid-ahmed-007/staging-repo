@@ -9,7 +9,7 @@
 
 ## Project Structure
 ```text
-eduauth-registry-maven/
+eduauth-registry/
 -- db/
    +-- schema.sql
 -- backend/

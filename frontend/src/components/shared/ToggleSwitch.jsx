@@ -1,4 +1,5 @@
 import { cn } from '../../utils/helpers';
+import { useId } from 'react';
 
 export default function ToggleSwitch({
  checked = false,
@@ -8,7 +9,8 @@ export default function ToggleSwitch({
  disabled = false,
  id,
 }) {
- const toggleId = id || `toggle-${label?.replace(/\s+/g, '-').toLowerCase()}`;
+ const generatedId = useId();
+ const toggleId = id || generatedId;
 
  return (
  <div className={cn(

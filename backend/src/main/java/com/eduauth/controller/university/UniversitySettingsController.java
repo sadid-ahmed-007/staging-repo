@@ -33,7 +33,8 @@ public class UniversitySettingsController {
     @GetMapping("/certificate-levels")
     public ResponseEntity<?> getCertificateLevels(@AuthenticationPrincipal User user) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         List<CertificateLevel> levels = certificateLevelRepository.findByInstitutionId(inst.getId());
         return ResponseEntity.ok(Map.of("success", true, "certificate_levels", levels));
@@ -41,9 +42,11 @@ public class UniversitySettingsController {
 
     @PostMapping("/legacy-certificate-levels")
     @Transactional
-    public ResponseEntity<?> createCertificateLevel(@AuthenticationPrincipal User user, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> createCertificateLevel(@AuthenticationPrincipal User user,
+            @RequestBody Map<String, String> body) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         CertificateLevel level = new CertificateLevel();
         level.setInstitutionId(inst.getId());
@@ -57,12 +60,15 @@ public class UniversitySettingsController {
 
     @PutMapping("/legacy-certificate-levels/{id}")
     @Transactional
-    public ResponseEntity<?> updateCertificateLevel(@AuthenticationPrincipal User user, @PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> updateCertificateLevel(@AuthenticationPrincipal User user, @PathVariable("id") Long id,
+            @RequestBody Map<String, String> body) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<CertificateLevel> levelOpt = certificateLevelRepository.findByIdAndInstitutionId(id, inst.getId());
-        if (levelOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+        if (levelOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
 
         CertificateLevel level = levelOpt.get();
         level.setName(body.get("name"));
@@ -74,12 +80,15 @@ public class UniversitySettingsController {
 
     @DeleteMapping("/legacy-certificate-levels/{id}")
     @Transactional
-    public ResponseEntity<?> deactivateCertificateLevel(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
+    public ResponseEntity<?> deactivateCertificateLevel(@AuthenticationPrincipal User user,
+            @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<CertificateLevel> levelOpt = certificateLevelRepository.findByIdAndInstitutionId(id, inst.getId());
-        if (levelOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+        if (levelOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
 
         CertificateLevel level = levelOpt.get();
         level.setIsActive(false);
@@ -90,12 +99,15 @@ public class UniversitySettingsController {
 
     @PostMapping("/certificate-levels/{id}/reactivate")
     @Transactional
-    public ResponseEntity<?> reactivateCertificateLevel(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
+    public ResponseEntity<?> reactivateCertificateLevel(@AuthenticationPrincipal User user,
+            @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<CertificateLevel> levelOpt = certificateLevelRepository.findByIdAndInstitutionId(id, inst.getId());
-        if (levelOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+        if (levelOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
 
         CertificateLevel level = levelOpt.get();
         level.setIsActive(true);
@@ -111,7 +123,8 @@ public class UniversitySettingsController {
             @AuthenticationPrincipal User user,
             @RequestParam(required = false, name = "certificate_level_id") Long levelId) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         List<Department> depts;
         if (levelId != null) {
@@ -124,9 +137,11 @@ public class UniversitySettingsController {
 
     @PostMapping("/legacy-departments")
     @Transactional
-    public ResponseEntity<?> createDepartment(@AuthenticationPrincipal User user, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> createDepartment(@AuthenticationPrincipal User user,
+            @RequestBody Map<String, Object> body) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Department dept = new Department();
         dept.setInstitutionId(inst.getId());
@@ -143,12 +158,15 @@ public class UniversitySettingsController {
 
     @PutMapping("/legacy-departments/{id}")
     @Transactional
-    public ResponseEntity<?> updateDepartment(@AuthenticationPrincipal User user, @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> updateDepartment(@AuthenticationPrincipal User user, @PathVariable("id") Long id,
+            @RequestBody Map<String, Object> body) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(id, inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
 
         Department dept = deptOpt.get();
         dept.setName((String) body.get("name"));
@@ -165,10 +183,12 @@ public class UniversitySettingsController {
     @Transactional
     public ResponseEntity<?> deactivateDepartment(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(id, inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
 
         Department dept = deptOpt.get();
         dept.setIsActive(false);
@@ -181,10 +201,12 @@ public class UniversitySettingsController {
     @Transactional
     public ResponseEntity<?> reactivateDepartment(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(id, inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
 
         Department dept = deptOpt.get();
         dept.setIsActive(true);
@@ -200,7 +222,8 @@ public class UniversitySettingsController {
             @AuthenticationPrincipal User user,
             @RequestParam(required = false, name = "department_id") Long deptId) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         // Security check: ensure department belongs to institution
         if (deptId != null) {
@@ -212,18 +235,21 @@ public class UniversitySettingsController {
             return ResponseEntity.ok(Map.of("success", true, "majors", majors));
         }
 
-        return ResponseEntity.ok(Map.of("success", true, "majors", List.of())); // need department to fetch majors realistically
+        return ResponseEntity.ok(Map.of("success", true, "majors", List.of())); // need department to fetch majors
+                                                                                // realistically
     }
 
     @PostMapping("/majors")
     @Transactional
     public ResponseEntity<?> createMajor(@AuthenticationPrincipal User user, @RequestBody Map<String, Object> body) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Long deptId = Long.valueOf(body.get("department_id").toString());
         Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(deptId, inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Department not found"));
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Department not found"));
 
         Major major = new Major();
         major.setDepartmentId(deptId);
@@ -236,17 +262,22 @@ public class UniversitySettingsController {
 
     @PutMapping("/majors/{id}")
     @Transactional
-    public ResponseEntity<?> updateMajor(@AuthenticationPrincipal User user, @PathVariable("id") Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> updateMajor(@AuthenticationPrincipal User user, @PathVariable("id") Long id,
+            @RequestBody Map<String, Object> body) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<Major> majorOpt = majorRepository.findById(id);
-        if (majorOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
-        
+        if (majorOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+
         Major major = majorOpt.get();
         // check ownership
-        Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(major.getDepartmentId(), inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+        Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(major.getDepartmentId(),
+                inst.getId());
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
 
         major.setName((String) body.get("name"));
         majorRepository.save(major);
@@ -258,14 +289,18 @@ public class UniversitySettingsController {
     @Transactional
     public ResponseEntity<?> deactivateMajor(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<Major> majorOpt = majorRepository.findById(id);
-        if (majorOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
-        
+        if (majorOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+
         Major major = majorOpt.get();
-        Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(major.getDepartmentId(), inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+        Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(major.getDepartmentId(),
+                inst.getId());
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
 
         major.setIsActive(false);
         majorRepository.save(major);
@@ -277,14 +312,18 @@ public class UniversitySettingsController {
     @Transactional
     public ResponseEntity<?> reactivateMajor(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
         Institution inst = resolveInstitution(user);
-        if (inst == null) return institutionNotFound();
+        if (inst == null)
+            return institutionNotFound();
 
         Optional<Major> majorOpt = majorRepository.findById(id);
-        if (majorOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
-        
+        if (majorOpt.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Not found"));
+
         Major major = majorOpt.get();
-        Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(major.getDepartmentId(), inst.getId());
-        if (deptOpt.isEmpty()) return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+        Optional<Department> deptOpt = departmentRepository.findByIdAndInstitutionId(major.getDepartmentId(),
+                inst.getId());
+        if (deptOpt.isEmpty())
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
 
         major.setIsActive(true);
         majorRepository.save(major);

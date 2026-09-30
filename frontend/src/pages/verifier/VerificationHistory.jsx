@@ -26,16 +26,25 @@ const STATUS_OPTIONS = [
 ];
 
 const STATUS_CONFIG = {
- success: { label: 'Verified', color: 'success', Icon: CheckCircle },
+ verified: { label: 'Verified', color: 'success', Icon: CheckCircle },
  not_found: { label: 'Not Found', color: 'error', Icon: XCircle },
  revoked: { label: 'Revoked', color: 'warning', Icon: AlertCircle },
  dob_mismatch: { label: 'DOB Mismatch', color: 'error', Icon: XCircle },
  private_certificate: { label: 'Private', color: 'warning', Icon: AlertCircle },
+ private: { label: 'Private', color: 'warning', Icon: AlertCircle },
+ invalid_checksum: { label: 'Invalid Serial', color: 'error', Icon: XCircle },
 };
 
 function StatusBadge({ status }) {
- const cfg = STATUS_CONFIG[status] || { label: status, color: 'default' };
- return <Badge variant={cfg.color}>{cfg.label}</Badge>;
+ const cfg = STATUS_CONFIG[status] || { label: status, color: 'default', Icon: Info };
+ const variant = cfg.color === 'error' ? 'danger' : cfg.color;
+ const Icon = cfg.Icon;
+ return (
+ <Badge variant={variant} className="flex items-center gap-1.5 w-fit pl-2.5 pr-3 py-1">
+ <Icon className="h-3.5 w-3.5" />
+ {cfg.label}
+ </Badge>
+ );
 }
 
 function DetailRow({ icon: Icon, label, value }) {
@@ -512,9 +521,9 @@ export default function VerificationHistory() {
  <div className="space-y-5">
  {/* Status banner */}
  <div className={`rounded-xl px-4 py-3 flex items-center gap-3 ${
- selectedLog.status === 'success'
+ selectedLog.status === 'verified'
  ? 'bg-green-50 /20 border border-green-200 '
- : selectedLog.status === 'revoked'
+ : (selectedLog.status === 'revoked' || selectedLog.status === 'private' || selectedLog.status === 'private_certificate')
  ? 'bg-amber-50 /20 border border-amber-200 '
  : 'bg-red-50 /20 border border-red-200 '
  }`}>
@@ -524,13 +533,13 @@ export default function VerificationHistory() {
  return (
  <>
  <Icon className={`h-5 w-5 flex-shrink-0 ${
- selectedLog.status === 'success' ? 'text-green-600' :
- selectedLog.status === 'revoked' ? 'text-amber-600' : 'text-red-600'
+ selectedLog.status === 'verified' ? 'text-green-600' :
+ (selectedLog.status === 'revoked' || selectedLog.status === 'private' || selectedLog.status === 'private_certificate') ? 'text-amber-600' : 'text-red-600'
  }`} />
  <div>
  <p className={`text-sm font-semibold ${
- selectedLog.status === 'success' ? 'text-green-800 ' :
- selectedLog.status === 'revoked' ? 'text-amber-800 ' : 'text-red-800 '
+ selectedLog.status === 'verified' ? 'text-green-800 ' :
+ (selectedLog.status === 'revoked' || selectedLog.status === 'private' || selectedLog.status === 'private_certificate') ? 'text-amber-800 ' : 'text-red-800 '
  }`}>
  {cfg.label || selectedLog.status}
  </p>
@@ -542,7 +551,7 @@ export default function VerificationHistory() {
  </div>
 
  {/* Certificate details — only shown for successful verifications */}
- {selectedLog.status === 'success' && selectedLog.certificate ? (
+ {selectedLog.status === 'verified' && selectedLog.certificate ? (
  <div>
  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Certificate Details</h3>
  <div className="rounded-xl border border-gray-100 divide-y divide-gray-100 dark:divide-gray-800 px-4">
@@ -557,7 +566,7 @@ export default function VerificationHistory() {
  <DetailRow icon={Calendar} label="Issue Date" value={selectedLog.certificate.issue_date} />
  </div>
  </div>
- ) : selectedLog.status !== 'success' ? (
+ ) : selectedLog.status !== 'verified' ? (
  <VerificationErrorPanel status={selectedLog.status} serial={selectedLog.serial} />
  ) : null}
 

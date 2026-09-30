@@ -410,12 +410,7 @@ export default function StudentSearch() {
  </p>
  )}
 
- {searchResult.student?.studentId && (
- <p className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">
- <CreditCard className="w-3.5 h-3.5 text-[var(--text-muted)]" />
- <span>Student ID: <strong className="text-[var(--text-primary)]">{searchResult.student.studentId}</strong></span>
- </p>
- )}
+
 
  <div className="pt-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
  <GraduationCap className="w-4 h-4 text-[var(--brand)] shrink-0" />

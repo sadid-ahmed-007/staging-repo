@@ -185,20 +185,11 @@ public class VerifierAccessController {
             currentEnrollment.put("program", activeEnrollment.getProgram());
         }
 
-        String studentIdValue = null;
-        if (activeEnrollment != null) {
-            studentIdValue = activeEnrollment.getRollNumber() != null
-                    ? activeEnrollment.getRollNumber()
-                    : activeEnrollment.getEnrollmentNumber();
-        } else if ("student_id".equalsIgnoreCase(type)) {
-            studentIdValue = q.trim();
-        }
-
         Map<String, Object> studentData = new LinkedHashMap<>();
         studentData.put("id",                   student.getId());
         studentData.put("name",                 (student.getFirstName() + " " + student.getLastName()).trim());
         studentData.put("email",                student.getUser().getEmail()); // Always give email along with searched user
-        studentData.put("studentId",            studentIdValue);
+
         studentData.put("hasActiveAccess",      hasActiveAccess);
         studentData.put("hasActiveAccessToAll", hasActiveAccessToAll);
         studentData.put("hasPendingRequest",    hasPendingRequest);

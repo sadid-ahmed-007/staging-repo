@@ -50,7 +50,8 @@ public class VerificationNotificationService {
             String  verifierEmail = null;
 
             if (!isAnonymous) {
-                Verifier verifier = verifierRepository.findById(verifierId).orElse(null);
+                // verifierId is actually the User ID here (verifier_user_id)
+                Verifier verifier = verifierRepository.findByUserId(verifierId).orElse(null);
                 if (verifier != null) {
                     companyName   = verifier.getCompanyName();
                     verifierEmail = verifier.getUser() != null

@@ -15,7 +15,6 @@ import SelectField from '../../components/shared/SelectField';
 import ToggleSwitch from '../../components/shared/ToggleSwitch';
 import CertificateDetailModal from '../../components/certificates/CertificateDetailModal';
 import CertificatePrivacyModal from '../../components/certificates/CertificatePrivacyModal';
-import CertificatePrivacyModal from '../../components/certificates/CertificatePrivacyModal';
 import api from '../../services/api';
 import { formatDate, cn } from '../../utils/helpers';
 import { downloadCertificatePDF, previewCertificatePDF } from '../../services/certificateService';

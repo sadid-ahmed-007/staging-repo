@@ -107,13 +107,12 @@ public class VerifierController {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Not a verifier"));
         }
 
-        // Pass Verifier entity ID (not user ID) — VerificationNotificationService uses it
-        // to load company name for the notification email.
-        Long verifierId = user.getVerifier().getId();
+        // Pass User ID for the VerificationLog (verifier_user_id column)
+        Long verifierUserId = user.getId();
 
         // Logged-in verifiers always bypass the allowAnonymousVerification block (hasActiveGrant=true).
         // The anonymous-block only applies to un-authenticated public requests.
-        return verifyController.doVerify(serial, dateOfBirth, verifierId, false, true, httpRequest);
+        return verifyController.doVerify(serial, dateOfBirth, verifierUserId, false, true, httpRequest);
     }
 
 
