@@ -231,7 +231,7 @@ export default function Sidebar({ open, onClose }) {
  )}
  onClick={onClose}
  >
- <div className="relative flex items-center">
+ <div className="relative flex items-center shrink-0">
  <Icon className="w-4 h-4" />
  {to === '/student/access-requests' && pendingAccessRequests > 0 && (
  <span className="absolute -top-1.5 -right-2 flex min-h-[14px] min-w-[14px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
@@ -259,7 +259,7 @@ export default function Sidebar({ open, onClose }) {
  </span>
  )}
  </div>
- {label}
+ <span className="truncate">{label}</span>
  </NavLink>
  ))}
  </nav>

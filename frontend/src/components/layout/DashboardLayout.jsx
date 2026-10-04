@@ -11,8 +11,8 @@ export default function DashboardLayout({ children }) {
  <div className="flex">
  <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
  <main className="min-w-0 flex-1 transition-all duration-200 lg:ml-[240px] pt-[60px]">
- <div className="min-h-[calc(100vh-60px)] p-6">
- <div className="mx-auto max-w-6xl space-y-6">
+ <div className="min-h-[calc(100vh-60px)] p-6 lg:p-8">
+ <div className="w-full max-w-[1600px] space-y-6">
  {children}
  </div>
  </div>

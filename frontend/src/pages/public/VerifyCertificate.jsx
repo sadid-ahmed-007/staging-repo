@@ -51,7 +51,7 @@ export default function VerifyCertificate() {
  if (legacySerial || dob) {
  setFormData((current) => ({ 
  ...current, 
- ...(legacySerial && { serial: legacySerial.toUpperCase() }),
+ ...(legacySerial && { serial: legacySerial }),
  ...(dob && { date_of_birth: dob })
  }));
 
@@ -197,7 +197,7 @@ export default function VerifyCertificate() {
  };
 
  const updateField = (field) => (event) => {
- const value = field === 'serial' ? event.target.value.toUpperCase() : event.target.value;
+ const value = event.target.value;
  setFormData((current) => ({ ...current, [field]: value }));
  
  if (validationErrors[field]) {
@@ -441,9 +441,9 @@ export default function VerifyCertificate() {
 
 function DetailRow({ label, value }) {
  return (
- <div className="flex justify-between items-center py-2.5">
- <span className="text-sm text-[var(--text-muted)]">{label}</span>
- <span className="text-sm font-medium text-[var(--text-primary)] text-right">{value || 'N/A'}</span>
+ <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start py-2.5 gap-1 sm:gap-4">
+ <span className="text-sm text-[var(--text-muted)] shrink-0">{label}</span>
+ <span className="text-sm font-medium text-[var(--text-primary)] sm:text-right break-words">{value || 'N/A'}</span>
  </div>
  );
 }

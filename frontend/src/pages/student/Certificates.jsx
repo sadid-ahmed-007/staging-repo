@@ -385,7 +385,7 @@ export default function StudentCertificates() {
  {filteredCertificates?.map((certificate) => (
  <Card key={certificate.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
  {/* Top */}
- <div className="flex justify-between items-start mb-4">
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
  <div className="flex items-center gap-1.5 flex-wrap">
  <Badge variant="primary">{certificate.certificateLevel}</Badge>
  <span className={cn(
@@ -427,7 +427,7 @@ export default function StudentCertificates() {
  </div>
 
  {/* Footer */}
- <div className="mt-auto pt-4 border-t border-[var(--border)] flex justify-between items-center">
+ <div className="mt-auto pt-4 border-t border-[var(--border)] flex flex-wrap justify-between items-center gap-3">
  <div className="flex items-center">
  <ToggleSwitch
  checked={certificate.isPubliclyShareable}

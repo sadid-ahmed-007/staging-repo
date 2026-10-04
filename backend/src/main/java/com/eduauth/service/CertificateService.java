@@ -30,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -85,6 +86,7 @@ public class CertificateService {
      * @param institutionId institution ID — required when userRole="university" for ownership check; ignored for admin
      * @return the updated Certificate entity
      */
+    @Transactional
     public Certificate revokeCertificate(Long certId, String reason,
                                           Long userId, String userRole,
                                           Long institutionId) {
@@ -151,6 +153,7 @@ public class CertificateService {
      * @param institutionId institution ID — required when userRole="university"
      * @return the updated Certificate entity
      */
+    @Transactional
     public Certificate revalidateCertificate(Long certId, String reason,
                                               Long userId, String userRole,
                                               Long institutionId) {

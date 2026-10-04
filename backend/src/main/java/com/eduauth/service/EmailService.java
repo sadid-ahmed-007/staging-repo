@@ -271,11 +271,11 @@ public class EmailService {
         sendInternal(userId, "certificateEvents", toEmail, "Certificate Revoked", "certificate-revoked.html", 
             Map.of(
             "toEmail", toEmail,
-            "name", name,
-            "certificateName", certificateName,
-            "serial", serial,
-            "revokedBy", revokedBy,
-            "reason", reason
+            "name", name != null ? name : "",
+            "certificateName", certificateName != null ? certificateName : "",
+            "serial", serial != null ? serial : "",
+            "revokedBy", revokedBy != null ? revokedBy : "",
+            "reason", reason != null ? reason : ""
             )
         );
     }
@@ -284,9 +284,9 @@ public class EmailService {
         sendInternal(userId, "certificateEvents", toEmail, "Certificate Revoked by Admin", "certificate-revoked-admin.html", 
             Map.of(
             "toEmail", toEmail,
-            "studentName", studentName,
-            "serial", serial,
-            "reason", reason
+            "studentName", studentName != null ? studentName : "",
+            "serial", serial != null ? serial : "",
+            "reason", reason != null ? reason : ""
             )
         );
     }
@@ -295,9 +295,9 @@ public class EmailService {
         sendInternal(userId, "certificateEvents", toEmail, "Certificate Revalidated", "certificate-revalidated.html", 
             Map.of(
             "toEmail", toEmail,
-            "name", name,
-            "certificateName", certificateName,
-            "serial", serial
+            "name", name != null ? name : "",
+            "certificateName", certificateName != null ? certificateName : "",
+            "serial", serial != null ? serial : ""
             )
         );
     }

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "EduAuth Registry API",
-    "description": "EduAuth Registry API Collection\n\nDEMO CREDENTIALS (pre-seeded in database):\n  Admin:      admin@eduauth.com / admin123\n  Student:    student@test.com / password123\n  University: demo@uiu.ac.bd / password123\n  Verifier:   verifier@company.com / password123\n\nHOW TO START:\n  1. Open folder '\ud83d\ude80 Start Here \u2014 Login as Each Role'\n  2. Run all 4 login requests\n  3. Tokens are saved automatically as collection variables\n  4. All other requests will use these tokens automatically\n\nFOR A FULL DEMO:\n  Open folder '\ud83e\uddea Test Flows' and run flows in order.\n  Each flow has numbered steps and descriptions.",
+    "description": "EduAuth Registry API Collection — Updated 2026-10-03\n\nDEMO CREDENTIALS:\n  Admin:      admin@eduauth.com / admin123\n  Student:    student@test.com / password123\n  University: demo@uiu.ac.bd / password123\n  Verifier:   verifier@company.com / password123\n\nHOW TO START:\n  1. Open '🚀 Start Here — Login as Each Role'\n  2. Run all 4 login requests — tokens save automatically\n  3. All other requests use these tokens automatically\n\nCOLLECTION VARIABLES (auto-populated or set manually):\n  base_url: http://localhost:8080/api\n  admin_token, student_token, university_token, verifier_token\n  student_id, certificate_id, enrollment_id, application_id,\n  extension_request_id, access_request_id, program_id\n\nTEST FLOWS (run in order for a full demo):\n  Flow 1: Full Auth Flow\n  Flow 2: Certificate Verification\n  Flow 3: Issue Certificate\n  Flow 4: Verifier Access Request\n  Flow 5: Student Application to University\n  Flow 6: Admin Management\n  Flow 7: Student University Application\n  Flow 8: Extension Request\n  Flow 9: Certificate Privacy + Verification Alert\n  Flow 10: Account Deactivation and Reactivation\n  Flow 11: Program Management\n\nTOTAL ENDPOINTS: 165",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -54,11 +54,31 @@
       "key": "access_request_id",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "extension_request_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "program_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "department_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "level_id",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "\ud83d\ude80 Start Here \u2014 Login as Each Role",
+      "name": "🚀 Start Here — Login as Each Role",
       "item": [
         {
           "name": "Login (Admin)",
@@ -476,6 +496,38 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Reactivate Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/reactivate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reactivate"
+              ]
+            },
+            "description": "Reactivate deactivated account",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@test.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -525,7 +577,7 @@
           "response": []
         },
         {
-          "name": "Get Universities",
+          "name": "List Approved Universities",
           "request": {
             "method": "GET",
             "header": [],
@@ -539,7 +591,7 @@
                 "universities"
               ]
             },
-            "description": "List all active universities",
+            "description": "List approved universities for apply page",
             "auth": {
               "type": "noauth"
             }
@@ -1037,7 +1089,7 @@
                     "applications"
                   ]
                 },
-                "description": "Submit an application to a university",
+                "description": "Submit university application",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1050,7 +1102,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"universityId\": 1,\n  \"programId\": 1\n}"
+                  "raw": "{\n  \"universityId\": 1,\n  \"certificateLevelId\": 1,\n  \"departmentId\": 1,\n  \"programId\": 1,\n  \"personalStatement\": \"I would like to join this program...\"\n}"
                 }
               },
               "response": []
@@ -1070,7 +1122,7 @@
                     "applications"
                   ]
                 },
-                "description": "List my applications",
+                "description": "List all university applications",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1090,17 +1142,17 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/student/applications/{{application_id}}",
+                  "raw": "{{base_url}}/student/applications/{{id}}",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "student",
                     "applications",
-                    "{{{{application_id}}}}"
+                    "{{{id}}}"
                   ]
                 },
-                "description": "Cancel an application",
+                "description": "Cancel pending application",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1193,17 +1245,16 @@
                 "method": "POST",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/student/profile/avatar",
+                  "raw": "{{base_url}}/profile/avatar",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
-                    "student",
                     "profile",
                     "avatar"
                   ]
                 },
-                "description": "Change Body type to form-data in Postman",
+                "description": "Upload profile picture",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1211,16 +1262,6 @@
                       "key": "token",
                       "value": "{{student_token}}",
                       "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "file",
-                      "type": "file",
-                      "src": []
                     }
                   ]
                 }
@@ -1272,16 +1313,16 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/student/profile-change",
+                  "raw": "{{base_url}}/profile/change-requests",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
-                    "student",
-                    "profile-change"
+                    "profile",
+                    "change-requests"
                   ]
                 },
-                "description": "List my profile change requests",
+                "description": "List change requests",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1291,6 +1332,210 @@
                       "type": "string"
                     }
                   ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Avatar",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/profile/avatar",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "avatar"
+                  ]
+                },
+                "description": "Remove profile picture",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request Change",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/profile/change-request",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "change-request"
+                  ]
+                },
+                "description": "Request locked field change",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"field\": \"firstName\",\n  \"newValue\": \"John\",\n  \"reason\": \"Typo in original name\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Deactivate Account",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/profile/deactivate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "deactivate"
+                  ]
+                },
+                "description": "Deactivate account",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"password\": \"password123\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request Deletion",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/profile/request-deletion",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "request-deletion"
+                  ]
+                },
+                "description": "Request account deletion",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Deletion Request",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/profile/request-deletion",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "request-deletion"
+                  ]
+                },
+                "description": "Cancel deletion request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/profile/password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "profile",
+                    "password"
+                  ]
+                },
+                "description": "Change password",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"oldPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
                 }
               },
               "response": []
@@ -1483,6 +1728,188 @@
                       "type": "string"
                     }
                   ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Complete History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/student/history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "student",
+                "history"
+              ]
+            },
+            "description": "Get complete history timeline",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{student_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Extension Requests",
+          "item": [
+            {
+              "name": "Request Extension",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/enrollment/{{id}}/request-extension",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "enrollment",
+                    "{{{id}}}",
+                    "request-extension"
+                  ]
+                },
+                "description": "Request extension for enrollment",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"requestedNewDate\": \"2027-12-01\",\n  \"reason\": \"I need additional time\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Extension Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/enrollment/extension-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "enrollment",
+                    "extension-requests"
+                  ]
+                },
+                "description": "List all extension requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Extension Request",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/student/enrollment/extension-requests/{{id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "enrollment",
+                    "extension-requests",
+                    "{{{id}}}"
+                  ]
+                },
+                "description": "Cancel pending extension request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Privacy Settings",
+          "item": [
+            {
+              "name": "Update Certificate Privacy",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/student/certificates/{{id}}/privacy",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "student",
+                    "certificates",
+                    "{{{id}}}",
+                    "privacy"
+                  ]
+                },
+                "description": "Update certificate privacy settings",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"allowAnonymousVerification\": false,\n  \"notifyOnVerification\": true\n}"
                 }
               },
               "response": []
@@ -2034,26 +2461,20 @@
               "name": "Revoke Certificate",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
+                "header": [],
                 "url": {
-                  "raw": "{{base_url}}/university/certificates/{{certificate_id}}/revoke",
+                  "raw": "{{base_url}}/university/certificates/{{id}}/revoke",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "university",
                     "certificates",
-                    "{{{{certificate_id}}}}",
+                    "{{{id}}}",
                     "revoke"
                   ]
                 },
-                "description": "Revoke a certificate",
+                "description": "University revokes cert",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2063,10 +2484,6 @@
                       "type": "string"
                     }
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"reason\": \"Error in record\"\n}"
                 }
               },
               "response": []
@@ -2075,26 +2492,20 @@
               "name": "Revalidate Certificate",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
+                "header": [],
                 "url": {
-                  "raw": "{{base_url}}/university/certificates/{{certificate_id}}/revalidate",
+                  "raw": "{{base_url}}/university/certificates/{{id}}/revalidate",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "university",
                     "certificates",
-                    "{{{{certificate_id}}}}",
+                    "{{{id}}}",
                     "revalidate"
                   ]
                 },
-                "description": "Revalidate a revoked certificate",
+                "description": "University revalidates cert",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2104,10 +2515,6 @@
                       "type": "string"
                     }
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"reason\": \"Resolved\"\n}"
                 }
               },
               "response": []
@@ -2118,7 +2525,7 @@
           "name": "Applications",
           "item": [
             {
-              "name": "List Applications",
+              "name": "List Incoming Applications",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -2132,7 +2539,7 @@
                     "applications"
                   ]
                 },
-                "description": "List pending student applications",
+                "description": "List incoming applications",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2152,17 +2559,17 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/university/applications/{{application_id}}",
+                  "raw": "{{base_url}}/university/applications/{{id}}",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "university",
                     "applications",
-                    "{{{{application_id}}}}"
+                    "{{{id}}}"
                   ]
                 },
-                "description": "View specific application",
+                "description": "Application detail with student certs",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2188,14 +2595,14 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/university/applications/{{application_id}}/review",
+                  "raw": "{{base_url}}/university/applications/{{id}}/review",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "university",
                     "applications",
-                    "{{{{application_id}}}}",
+                    "{{{id}}}",
                     "review"
                   ]
                 },
@@ -2212,7 +2619,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"ACCEPTED\",\n  \"message\": \"Welcome!\"\n}"
+                  "raw": "{\n  \"approved\": true,\n  \"message\": \"Welcome! We look forward to having you.\"\n}"
                 }
               },
               "response": []
@@ -2533,6 +2940,412 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "Extension Requests",
+          "item": [
+            {
+              "name": "List Extension Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/extension-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "extension-requests"
+                  ]
+                },
+                "description": "List extension requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Review Extension",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/extension-requests/{{id}}/review",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "extension-requests",
+                    "{{{id}}}",
+                    "review"
+                  ]
+                },
+                "description": "Approve or reject extension",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": true,\n  \"approvedNewDate\": \"2027-12-01\",\n  \"reviewNotes\": \"Extension approved.\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Program Management",
+          "item": [
+            {
+              "name": "Create Certificate Level",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificate-levels",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificate-levels"
+                  ]
+                },
+                "description": "Create level",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Bachelor of Science\",\n  \"shortName\": \"BSc\",\n  \"serialPrefix\": \"BSC\",\n  \"durationYears\": 4\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Certificate Level",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/certificate-levels/{{id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificate-levels",
+                    "{{{id}}}"
+                  ]
+                },
+                "description": "Edit level",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Bachelor of Science Updated\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Deactivate Certificate Level",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/certificate-levels/{{id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "certificate-levels",
+                    "{{{id}}}"
+                  ]
+                },
+                "description": "Deactivate level",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Department",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/departments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "departments"
+                  ]
+                },
+                "description": "Create department",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"certificateLevelId\": 1,\n  \"name\": \"Computer Science\",\n  \"code\": \"CS\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Department",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/departments/{{id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "departments",
+                    "{{{id}}}"
+                  ]
+                },
+                "description": "Edit department",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"CS Updated\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Program",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/programs",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "programs"
+                  ]
+                },
+                "description": "Create program",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"departmentId\": 1,\n  \"name\": \"Bachelor of Science in Computer Science\",\n  \"shortName\": \"BSc in CS\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Program",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/university/programs/{{id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "programs",
+                    "{{{id}}}"
+                  ]
+                },
+                "description": "Edit program",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"BSc in CS Updated\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Program Structure",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/university/program-structure",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "university",
+                    "program-structure"
+                  ]
+                },
+                "description": "Full nested structure",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{university_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Recent Activity Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/university/dashboard/activity",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "university",
+                "dashboard",
+                "activity"
+              ]
+            },
+            "description": "Recent activity feed",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{university_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -2962,6 +3775,36 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "Verification Log Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/verifier/verifications/{{id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "verifier",
+                "verifications",
+                "{{{id}}}"
+              ]
+            },
+            "description": "Single verification log detail",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{verifier_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -3320,6 +4163,37 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "Reactivate Account",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/users/{{id}}/reactivate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "{{{id}}}",
+                    "reactivate"
+                  ]
+                },
+                "description": "Reactivate deactivated account",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
             }
           ]
         },
@@ -3430,26 +4304,20 @@
               "name": "Revalidate Certificate",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
+                "header": [],
                 "url": {
-                  "raw": "{{base_url}}/admin/certificates/{{certificate_id}}/revalidate",
+                  "raw": "{{base_url}}/admin/certificates/{{id}}/revalidate",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "certificates",
-                    "{{{{certificate_id}}}}",
+                    "{{{id}}}",
                     "revalidate"
                   ]
                 },
-                "description": "Admin revalidate certificate",
+                "description": "Admin revalidates any cert",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -3459,10 +4327,6 @@
                       "type": "string"
                     }
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"reason\": \"Issue resolved\"\n}"
                 }
               },
               "response": []
@@ -3487,7 +4351,7 @@
                     "access-grants"
                   ]
                 },
-                "description": "List all active access grants",
+                "description": "List all access grants",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -3538,6 +4402,36 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Revoke Access Grant",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/access-grants/{{id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "access-grants",
+                    "{{{id}}}"
+                  ]
+                },
+                "description": "Revoke any grant",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
                 }
               },
               "response": []
@@ -3657,6 +4551,97 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "List Change Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/profile-change-requests",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile-change-requests"
+                  ]
+                },
+                "description": "List all change requests",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Approve Change Request",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/profile-change-requests/{{id}}/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile-change-requests",
+                    "{{{id}}}",
+                    "approve"
+                  ]
+                },
+                "description": "Approve change request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reject Change Request",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/admin/profile-change-requests/{{id}}/reject",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "profile-change-requests",
+                    "{{{id}}}",
+                    "reject"
+                  ]
+                },
+                "description": "Reject change request",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{admin_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
             }
           ]
         },
@@ -3678,7 +4663,7 @@
                     "deletion-requests"
                   ]
                 },
-                "description": "List account deletion requests",
+                "description": "List deletion requests",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -3696,26 +4681,20 @@
               "name": "Complete Deletion",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
+                "header": [],
                 "url": {
-                  "raw": "{{base_url}}/admin/deletion-requests/{request_id}/complete",
+                  "raw": "{{base_url}}/admin/deletion-requests/{{id}}/complete",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "deletion-requests",
-                    "{{request_id}}",
+                    "{{{id}}}",
                     "complete"
                   ]
                 },
-                "description": "Complete an account deletion",
+                "description": "Complete deletion",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -3725,10 +4704,6 @@
                       "type": "string"
                     }
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{}"
                 }
               },
               "response": []
@@ -3737,26 +4712,20 @@
               "name": "Cancel Deletion",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
+                "header": [],
                 "url": {
-                  "raw": "{{base_url}}/admin/deletion-requests/{request_id}/cancel",
+                  "raw": "{{base_url}}/admin/deletion-requests/{{id}}/cancel",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "deletion-requests",
-                    "{{request_id}}",
+                    "{{{id}}}",
                     "cancel"
                   ]
                 },
-                "description": "Cancel a deletion request",
+                "description": "Cancel deletion",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -3766,10 +4735,6 @@
                       "type": "string"
                     }
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{}"
                 }
               },
               "response": []
@@ -3823,11 +4788,11 @@
       ]
     },
     {
-      "name": "\ud83e\uddea Test Flows \u2014 Run These In Order",
+      "name": "🧪 Test Flows — Run These In Order",
       "item": [
         {
           "name": "Flow 1: Full Auth Flow",
-          "description": "Complete registration \u2192 OTP \u2192 admin approval \u2192 login",
+          "description": "Complete registration → OTP → admin approval → login",
           "item": [
             {
               "name": "Step 1: Register Student",
@@ -4007,7 +4972,7 @@
                     "verify?serial=CERT123&dob=1999-01-01"
                   ]
                 },
-                "description": "Verify with wrong DOB \u2192 expect not_found",
+                "description": "Verify with wrong DOB → expect not_found",
                 "auth": {
                   "type": "noauth"
                 }
@@ -4028,7 +4993,7 @@
                     "verify?serial=CERT123-TAMPERED&dob=2000-01-01"
                   ]
                 },
-                "description": "Verify tampered serial \u2192 expect invalid_checksum",
+                "description": "Verify tampered serial → expect invalid_checksum",
                 "auth": {
                   "type": "noauth"
                 }
@@ -4060,7 +5025,7 @@
         },
         {
           "name": "Flow 3: Issue Certificate",
-          "description": "University issues cert \u2192 student downloads PDF",
+          "description": "University issues cert → student downloads PDF",
           "item": [
             {
               "name": "Step 1: Search Enrolled Students",
@@ -4453,7 +5418,7 @@
                     "1"
                   ]
                 },
-                "description": "Verifier tries again \u2192 expect 403",
+                "description": "Verifier tries again → expect 403",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -4471,7 +5436,7 @@
         },
         {
           "name": "Flow 5: Student Application",
-          "description": "Student applies \u2192 university reviews",
+          "description": "Student applies → university reviews",
           "item": [
             {
               "name": "Step 1: Get University List",

@@ -35,10 +35,12 @@ public class Student {
     private String lastName;
 
     // DB: nid_hash VARCHAR(64) NOT NULL UNIQUE
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "nid_hash", nullable = false, unique = true)
     private String nidHash;
 
     // DB: nid_encrypted TEXT (nullable)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "nid_encrypted", columnDefinition = "TEXT")
     private String nidEncrypted;
 

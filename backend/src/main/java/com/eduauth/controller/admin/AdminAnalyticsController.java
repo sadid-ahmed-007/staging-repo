@@ -22,6 +22,6 @@ public class AdminAnalyticsController {
     @GetMapping({"", "/"})
     public ResponseEntity<?> getAnalytics(@RequestParam(defaultValue = "30") int days) {
         Map<String, Object> data = analyticsService.getAnalytics(days);
-        return ResponseEntity.ok(data);
+        return ResponseEntity.ok(Map.of("success", true, "data", data));
     }
 }

@@ -162,7 +162,8 @@ public class VerifyController {
         // Step 3 (new): Anonymous verification block
         // If allowAnonymousVerification = false AND request is anonymous AND no active grant → not_found
         // (Do not reveal that the certificate exists — privacy protection)
-        if (isAnonymous && !hasActiveGrant
+        // Share links bypass this because the student explicitly generated the link for sharing.
+        if (isAnonymous && !hasActiveGrant && !isFromShareLink
                 && Boolean.FALSE.equals(certificate.getAllowAnonymousVerification())) {
             // Do NOT log to verification_logs — do not reveal cert exists
             return notFound();
